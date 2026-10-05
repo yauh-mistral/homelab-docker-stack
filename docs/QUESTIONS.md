@@ -1,0 +1,51 @@
+# Offene Fragen und getroffene Annahmen
+
+Jede getroffene Annahme ist hier mit Begründung aufgelistet. Nicht schließen — nur dokumentieren.
+
+## Zählung und Struktur
+
+1. **„33 Services" vs. 30 Stacks**: Das Repo enthält 30 Compose-Stacks in `projects/`. Die „33" ergeben sich aus multi-Service-Stacks (arr-stack=7, smarthome=4, media=5). Ich habe 43 backup-relevante Einheiten deklariert (feiner als der Stack, weil Restore/Retention pro Service sinnvoller ist). Wer genau „33" meinte, möge die Zählabgrenzung bestätigen.
+2. **Auftrag nannte `arcane/`-Verzeichnisse** (`/opt/docker/arcane/{data,projects}` tauchen im Snapshot auf), aber das Repo selbst heißt `arcane-docker-stack` mit `projects/` — ich habe `projects/` als Quelle der Wahrheit genommen.
+
+## Ziel und Infrastruktur
+
+3. **Zielpfad**: Auftrag sagt „Zielverzeichnis auf ovi ist `/mnt/systems`". Ich habe `/mnt/systems/backups/ovi/` als Wurzel gewählt (Freiraum für weitere Hosts und Nicht-Backup-Inhalte auf dem NAS-Mount).
+4. **NAS-Mount-Eigenschaften**: Unbekannt, ob `/mnt/systems` Hardlinks (für rsync-Hardlink-Farmen) und `sync`-Semantik unterstützt. Strategie sieht deshalb rsync+Zeitstempel-Verzeichnisse vor, Hardlink-Optimierung als optional. Prüfen.
+5. **Restic**: Nicht bekannt, ob Restic auf ovi installiert ist. Der Dispatcher unterstützt Restic optional (`USE_RESTIC=true`), funktioniert aber vollständig ohne (`rsync`+Zeitstempel). Entscheidung nötig: Restic aktivieren (dann `restic` installieren + Passwortdatei `/etc/restic-password` anlegen)?
+6. **Cron-Einrichtung**: Der Auftrag verlangte keine laufende Automatisierung auf ovi selbst. Die Cron-Zeiten (DB täglich 02:00, Dateien 02:30, config wöchentlich So 03:00) stehen in der Strategie — Einrichtung auf ovi noch zu tun.
+
+## Datenbank-Details (aus .env.example abgeleitet — Produktiv-.env kann abweichen)
+
+7. **DB-Credentials**: Ich habe Benutzernamen/DB-Namen aus `.env.example` übernommen (z.B. `shynet_user`/`shynet_db`, `n8n_user`/`n8n_db`, `paperless`/`paperlessdb`). Passwörter (`DB_PASSWORD`) habe ich NICHT in Deklarationen hinterlegt — der Dispatcher liest sie bei Bedarf aus der Produktiv-`.env` des Stacks (mysql) oder nutzt `trust`/`POSTGRES_USER`-Auth im Container (pg_dump im Container läuft meist als Superuser ohne Passwort). Prüfen, ob pg_dump im Container ohne Passwort funktioniert (usu. ja, da lokale Unix-Socket-Auth).
+8. **Container-Namen**: `.env.example` nutzt teils `${COMPOSE_PROJECT_NAME}-...` (z.B. `analytics-db` aus `COMPOSE_PROJECT_NAME=analytics`). Der Host-Snapshot bestätigt: `analytics-db`, `n8n-db`, `paperless-db`, `paperless-broker`, `monitoring-kuma`, `monitoring-grafana`, `wanderer_db`, `tdarr-tdarr`, `ghost-mysql`, `immich_postgres`, `castopod_mariadb`, `litellm_db`, `sparkyfitness-db` (nicht im Snapshot, aber Compose-logisch). Für open-notebook habe ich `open-notebook-surrealdb-1` deklariert (Compose-Standard-Slug; nicht im Snapshot sichtbar) — auf ovi verifizieren.
+9. **Ghost-ActivityPub-Schema**: Ghost-Compose definiert `ACTIVITYPUB_DB_NAME=ghost_activitypub` in derselben MySQL-Instanz. Meine Deklaration dumpt nur `ghost_prod`. Vorschlag: `DB_NAME` auf `--databases ghost_prod ghost_activitypub` erweitern oder Dump über `mysqldump --all-databases`. Offen: Exponentiell eleganter wäre ein separater Dump pro Schema — Bedarf klären.
+10. **Vaultwarden sqlite3-Binary**: Vaultwarden-Image enthält `sqlite3` im Container — der Hersteller empfiehlt `sqlite3 db.sqlite3 ".backup ..."` via Container. Falls Binary fehlt: Fallback über Host-sqlite3 mit Stop-Fenster.
+11. **Forgejo DB-Typ**: Ich habe `forgejo dump` als DB-Dump gewählt (konsistent, deckt DB+Config ab). Unbekannt ist, ob Forgejo intern SQLite oder eine externe DB nutzt — `forgejo dump` ist in beiden Fällen korrekt.
+12. **Redis/Valkey-Instanzen** (Redis im Snapshot, Valkey mit `dump.rdb`): Diese gehören zu Stacks (searxng=Valkey-Cache, firecrawl=Queue) und sind als Cache/Queue klassifiziert und ignoriert. Prüfen, ob wirklich keine persistenten Daten (z.B. n8n-Binary-Daten in Redis — im Compose ist Redis nur für searxng/firecrawl/castopod/paperless-Broker deklariert — nur Cache/Broker/Queue-Rollen).
+
+## Datei-Backups
+
+13. **`/mnt/immich` (Immich UPLOAD_LOCATION)**: Liegt auf NAS (nicht im Snapshot, Größe unbekannt — vermutlich hunderte GB Fotos). Der Rhythmus (täglich, rsync-abhängig) kann auf so große Datenmengen treffen — Backup-Fenster (Laufzeit!) auf ovi messen; ggf. Immich auf wöchentlich + DB täglich stellen.
+14. **`/mnt/opencloud`**: Größe unbekannt. OpenCloud-Doku verlangt Stop-Fenster für konsistente Backups — täglicher Stop könnte unangenehm lang sein. Kompromiss: OpenCloud-Backup wöchentlich + DB-freie Struktur akzeptiert kleinere Inkonsistenzen (PosixFS) — Hersteller-Empfehlung ist aber Stop. Klären, wie lange ein Stop auf ovi tolerierbar ist.
+15. **`/mnt/paperless/*`**: `data`, `media`, `export` sind als NAS_DATA_PATH deklariert — ich sichere `data`+`media` per rsync (das deckt Dokumente+Thumbnails ab); `export` lasse ich weg (dient dem `document_exporter`, der optional als Hook laufen kann). Klären, ob `document_exporter` (Hersteller-Empfehlung als Alternative) als PRE_DUMP_HOOK gewünscht ist.
+16. **Audiobookshelf metadata (45G)**: Das `metadata`-Verzeichnis ist sehr groß (vermutlich Podcast-Cache + Cover). Ich habe nur `config` gesichert, `metadata` weggelassen. Prüfen, ob `metadata` Hörbuch-Cover enthält, die nicht rekonstruierbar sind — falls ja, in Deklaration aufnehmen.
+17. **Tautulli cache (897M)**: Cache, ignoriert. Falls Tautulli-Historie wichtig ist: `tautulli.db` wird im Datei-Backup (Stop-Fenster) erfasst — passt.
+18. **arr-Services MediaCover**: Sehr groß (6.8G bei lidarr), rekonstruierbar (aus APIs). Ich habe MediaCover NICHT ausgeschlossen (liegt in FILE_PATHS des /config) — Excludes-Verfeinerung möglich: `"MediaCover/"` würde 10+ GB sparen. Klären: Verlust akzeptieren?
+19. **`/opt/docker/5etools` (dnd, 6.9G)**: Statische Website aus einem GitHub-Repo — grundsätzlich neu klonbar. Ich habe es als config_only (Datei-Backup) deklariert, da der Dockerfile-Build individuell ist. Klären: reicht die Repo-URL als Dokumentation?
+20. **web-proxy `/opt/docker/nginx/mediafiles`, `staticfiles`, `html`**: Weiggelassen (statisch/vermutlich Medien- und Default-Inhalte). Nur conf/vhost/certs/htpasswd/acme/yauh gesichert. Klären.
+21. **Grafana-LDAP/Cookie-Secrets**: Grafana `data` (655M im Snapshot) enthält SQLite + Dashboards. `logs` ausgeschlossen (compose-trennt `data`/`logs`). Keine weiteren Ausschlüsse vorgenommen.
+
+## Restore
+
+22. **Restore-Richtung ohne `--delete`**: `restore.sh` rsynct zurück ohne `--delete` — Dateien, die im Backup-Stand fehlen, bleiben auf dem Ziel zurück (bewusst defensiv, kein Datenverlust durch Restore). Für exakte Abbildung manuell `rsync -a --delete` nachziehen.
+23. **Restore-Testskript deckt Postgres ab**: `test-restore.sh` testet Dump-Restores in Wegwerf-Postgres. MySQL/MariaDB-Test analog ergänzbar (Bedarf klären). Forgejo/Surreal/SQLite manuell laut docs/RESTORE.md.
+24. **Immich-Restore-Prozedur**: Immich verlangt für DB-Restore eine frische Installation (Doku). restore.sh spielt den Dump gegen die laufende/leere DB — für den Katastrophenfall docs/RESTORE.md beachten.
+
+## Selbstabnahme (Phase 5)
+
+25. **Sandbox-Einschränkung**: `bash -n` für alle 5 Skripte bestanden. Dry-Run gegen alle 43 Deklarationen: OK=40, SKIP=3 (crawl4ai, firecrawl, metube — als `ignore` deklariert), FAIL=0. Die „Quellpfad existiert nicht"-Warnungen sind sandboxes-erwartbar (kein `/opt/docker` hier) — auf ovi verschwinden sie. **Docker-Daemon steht in der Sandbox nicht zur Verfügung** — echte Container-Interaktionen (docker exec, Stop-Fenster, test-restore) sind auf ovi zu verifizieren.
+26. **`prune_dump_dirs`-Vereinfachung**: Retention für Dump-Verzeichnisse nutzt `find -mtime` — Dateisystem-mtime der Verzeichnisse, nicht das Datum im Namen. Für Monatsfirste wird das Namensmuster `YYYY-MM-01_*` geprüft. Funktion robust, aber auf ovi einmalig prüfen (ein Testlauf mit kurzem KEEP-Wert).
+27. **Restic-Wrapper**: `restic forget/prune` läuft mit `--keep-daily 14 --keep-weekly 8 --keep-monthly 12` — monatliche Behalte-Frist für Datei-Snshots weicht von der 12-Monats-Regel für DB-Dumps ab (12 monthly deckt 12 Monate ab) — konsistent genug, dokumentiert.
+28. **Kein Versand von Benachrichtigungen** (E-Mail/Healthchecks): Nicht gefordert, aber für einen Produktivbetrieb sinnvoll — Hook in backup.sh nachrüsten?
+29. **`.env`-Dateien des Produktsystems sind die Quelle für Passwörter** — der Dispatcher muss ggf. `source projects/<stack>/.env` vor dem Dump machen, um `DB_PASSWORD` zu haben (MySQL). Implementiert ist `DB_PASSWORD` als Variable, die aus der Deklaration ODER Umgebung kommt. Empfehlung: `/etc/backup.conf` sourced die Stack-.envs — auf ovi einrichten.
+30. **Open-Notebook-Containername unsicher** (siehe #8) und `DB_CONN=rocksdb:/mydata` vom Standard abgeleitet (compose mountet `/opt/docker/open-notebook/surreal:/mydata`, surrealdb:v2 default rocksdb) — auf ovi verifizieren.
