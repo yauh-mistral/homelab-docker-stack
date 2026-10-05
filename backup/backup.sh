@@ -34,14 +34,19 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-SERVICES_DIR="${SERVICES_DIR:-$SCRIPT_DIR/services.d}"
-[[ -d "$SERVICES_DIR" ]] || { echo "services.d nicht gefunden: $SERVICES_DIR" >&2; exit 2; }
-
-# /etc/backup.conf darf Pfade/Optionen ueberschreiben (ausser CLI-Flags)
+# /etc/backup.conf zuerst laden (setzt Quelle/Ziel: STACKS_DIR, BACKUP_ROOT, SERVICES_DIR, ...)
+# Reihenfolge: CLI-Flag > /etc/backup.conf > Defaults aus lib/common.sh
 if [[ -f /etc/backup.conf ]]; then
   # shellcheck disable=SC1091
   source /etc/backup.conf
 fi
+
+# SERVICES_DIR: Heimat der Deklarationen. Default neben diesem Skript; bei
+# Installation unter /opt/docker/backup zeigt der Installer sie auf
+# /opt/docker/backup/services.d (physisch eigene Kopie, unabhaengig vom Repo).
+SERVICES_DIR="${SERVICES_DIR:-$SCRIPT_DIR/services.d}"
+[[ -d "$SERVICES_DIR" ]] || { echo "services.d nicht gefunden: $SERVICES_DIR" >&2; exit 2; }
+[[ -n "${STACKS_DIR:-}" ]] || { echo "STACKS_DIR nicht gesetzt — Quelle der Compose-Stacks/.env unbekannt." >&2; echo "Setze STACKS_DIR in /etc/backup.conf (z.B. STACKS_DIR=/opt/docker/arcane/projects)" >&2; exit 2; }
 
 load_service_declarations "$SERVICES_DIR"
 
