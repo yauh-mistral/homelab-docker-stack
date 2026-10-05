@@ -34,8 +34,15 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+# /etc/backup.conf zuerst laden (Quelle/Ziel: STACKS_DIR, BACKUP_ROOT, SERVICES_DIR, ...)
+if [[ -f /etc/backup.conf ]]; then
+  # shellcheck disable=SC1091
+  source /etc/backup.conf
+fi
+
 SERVICES_DIR="${SERVICES_DIR:-$SCRIPT_DIR/services.d}"
 [[ -d "$SERVICES_DIR" ]] || { echo "services.d nicht gefunden" >&2; exit 2; }
+[[ -n "${STACKS_DIR:-}" ]] || { echo "STACKS_DIR nicht gesetzt — siehe /etc/backup.conf" >&2; exit 2; }
 DECL="$SERVICES_DIR/${SVC_ARG}.env"
 [[ -f "$DECL" ]] || { echo "Keine Deklaration fuer '$SVC_ARG' ($DECL)" >&2; exit 2; }
 load_declaration "$DECL"

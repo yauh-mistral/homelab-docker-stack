@@ -57,3 +57,10 @@ Jede getroffene Annahme ist hier mit Begründung aufgelistet. Nicht schließen �
 33. **Stop-Fenster-Rollback**: `stop_containers` startet bereits gestoppte Container zurück, wenn ein späterer Stop fehlschlägt (kein Service bleibt versehentlich down).
 34. **MySQL `DB_DUMP_EXTRA`**: wird jetzt auch für MySQL/MariaDB angewandt; Ghost dumpt damit `ghost_prod` + `ghost_activitypub` (schließt Frage #9).
 35. **Postgres-Readiness**: `wait_for_postgres` (pg_isready, 30×2s) vor jedem pg_dump — verhindert Teil-Dumps nach Host-Reboot.
+
+## Ergänzungen nach Struktur-Diskussion (PR 3)
+
+36. **Heimat des Backup-Systems**: Bewusst NICHT `/opt/docker/arcane` (Repo), sondern `/opt/docker/backup` als eigene Installation via `install.sh` (`--home` konfigurierbar). Repo-Updates überschreiben die Installation nicht; Re-Run des Installers aktualisiert sie (rsync/ohne `--delete`: lokal angepasste Deklarationen bleiben).
+37. **Quelle konfigurierbar**: `STACKS_DIR` in `/etc/backup.conf` zeigt auf die Compose-Stacks + `.env` (z.B. `/opt/docker/arcane/projects`). Deklarationen nutzen `%STACKS_DIR%`-Platzhalter (bislang `ghost.env: ENV_FILE`), aufgelöst in `load_declaration`. Dispatcher startet nicht ohne `STACKS_DIR` (Fail-fast gegen falsch aufgelöste Pfade).
+38. **Ziel konfigurierbar**: bleibt `BACKUP_ROOT` (Default `/mnt/systems/backups/ovi`), jetzt ebenfalls klar in `/etc/backup.conf` dokumentiert; `SERVICES_DIR` ist der dritte konfigurierbare Pfad (Heimat der Deklarationen nach Installation).
+39. **cp-Fallback im Installer**: rsync nicht garantiert auf Minimal-Hosts — Installer funktioniert mit beiden (getestet ohne rsync).

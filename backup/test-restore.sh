@@ -15,6 +15,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/common.sh"
 
 SERVICES_DIR="${SERVICES_DIR:-$SCRIPT_DIR/services.d}"
+if [[ -f /etc/backup.conf ]]; then
+  # shellcheck disable=SC1091
+  source /etc/backup.conf
+fi
 TEST_IMAGE="${TEST_IMAGE:-postgres:16-alpine}"
 TESTNET="backup-restore-test"
 TEST_PG_NAME="backup-restore-test-pg"

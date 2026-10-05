@@ -2,119 +2,143 @@
 
 Anleitung, um das Backup-System auf dem Ubuntu-Host `ovi` in Betrieb zu nehmen und einen Testrun zu starten.
 
-## Voraussetzungen
+## Architektur: Wer lebt wo?
 
-- Ubuntu-Host `ovi` mit root-Zugang (oder sudo), Docker läuft
-- Repo-Checkout liegt auf ovi unter `/opt/docker/arcane` (im Snapshot sichtbar: `/opt/docker/arcane/projects` — dort liegt dieses Repo)
-- NAS-Mount `/mnt/systems` ist eingebunden (`findmnt /mnt/systems` muss einen Mount zeigen)
+```
+/opt/docker/arcane/            Repo (Compose-Stacks + .env — die QUELLE)
+└── projects/<stack>/compose.yaml + .env
 
-## Schritt 1: Repo auf den aktuellen Stand bringen
+/opt/docker/backup/            Heimat des Backup-Systems (die INSTALLATION)
+├── backup.sh                  Dispatcher
+├── restore.sh                 Restore pro Service
+├── test-restore.sh             Dump-Restore-Test
+├── install.sh                 (nur bei Installation; Kopierer)
+├── lib/                       common.sh, db.sh
+├── services.d/*.env           Service-Deklarationen (installierte Kopie)
+└── docs/                      Referenz-Dokumentation
+
+/etc/backup.conf               Konfiguration: Quelle, Ziel, Restic (chmod 600)
+/mnt/systems/backups/ovi/      ZIEL auf dem NAS (db/ + files/ + _meta/)
+```
+
+Das Backup-System liegt **bewusst nicht im Repo-Checkout** (`/opt/docker/arcane`): Der Installer kopiert es nach `/opt/docker/backup` (konfigurierbar via `--home`). Repo-Updates überschreiben die Installation nicht; ein Re-Run von `install.sh` aktualisiert sie (Deklarationen in `services.d/` können individuell angepasst bleiben, `rsync` ohne `--delete`).
+
+**Woher kommen Quelle und Ziel?** Ausdrücklich aus `/etc/backup.conf`:
+- `STACKS_DIR` — wo Compose-Stacks und deren `.env` leben (z.B. `/opt/docker/arcane/projects`). Deklarationen nutzen den Platzhalter `%STACKS_DIR%` (z.B. `ENV_FILE=%STACKS_DIR%/ghost/.env`), der Dispatcher löst ihn auf. So bleibt die Deklaration host-agnostisch.
+- `BACKUP_ROOT` — Ziel auf dem NAS (`/mnt/systems/backups/ovi`).
+- `SERVICES_DIR` — Deklarations-Heimat (bei Installation `/opt/docker/backup/services.d`).
+
+## Schritt 0: Voraussetzungen
+
+- Ubuntu-Host `ovi` mit root-Zugriff, Docker läuft
+- Repo-Checkout unter `/opt/docker/arcane` (aktuell: `sudo git pull`)
+- NAS-Mount `/mnt/systems` eingebunden: `findmnt /mnt/systems`
+
+## Schritt 1: Installation
 
 ```bash
 cd /opt/docker/arcane
 sudo git pull
+sudo backup/install.sh \
+  --home /opt/docker/backup \
+  --stacks-dir /opt/docker/arcane/projects \
+  --backup-root /mnt/systems/backups/ovi
 ```
 
-## Schritt 2: Konfigurationsdatei anlegen
+Der Installer:
+1. kopiert `backup.sh`, `restore.sh`, `test-restore.sh`, `lib/`, `services.d/` (und `docs/`) nach `/opt/docker/backup`
+2. erzeugt `/etc/backup.conf` (mit `chmod 600`) bzw. ergänzt fehlende Einträge in einer bestehenden Datei
 
-Der Dispatcher liest optional `/etc/backup.conf`. Für den ersten Testrun genügen Defaults (Ziel `/mnt/systems/backups/ovi`), aber die Datei ist der saubere Ort für Overrides:
+Alternativ ohne Parameter — der Installer fragt interaktiv nach dem Quellpfad.
+
+## Schritt 2: Konfiguration prüfen
 
 ```bash
-sudo tee /etc/backup.conf >/dev/null <<'EOF'
-# Backup-Konfiguration fuer ovi
-BACKUP_ROOT=/mnt/systems/backups/ovi
-DRY_RUN=false
-VERBOSE=false
-# Restic optional (erst aktivieren, wenn restic installiert + Passwortdatei existiert):
+sudo cat /etc/backup.conf
+```
+Minimalinhalt:
+```bash
+STACKS_DIR=/opt/docker/arcane/projects      # Quelle: Compose + .env
+BACKUP_ROOT=/mnt/systems/backups/ovi        # Ziel: NAS
+SERVICES_DIR=/opt/docker/backup/services.d  # Heimat der Deklarationen
 USE_RESTIC=false
-# RESTIC_PASSWORD_FILE=/etc/restic-password
-EOF
-sudo chmod 600 /etc/backup.conf
 ```
 
 ## Schritt 3: DB-Passwörter (nur für MySQL/MariaDB-Services)
 
-Postgres-Dumps laufen im Container über die lokale Unix-Socket-Auth (`pg_dump -U <user>` ohne Passwort) — kein Handbedarf.
-
-MySQL/MariaDB (`ghost`, `castopod`) brauchen `DB_PASSWORD`. Die Ghost-Deklaration lädt es selbstständig via `ENV_FILE=/opt/docker/arcane/projects/ghost/.env`. Prüfen:
+Postgres-Dumps laufen im Container über lokale Unix-Socket-Auth — kein Handbedarf. MySQL/MariaDB (`ghost`, ggf. `castopod`) brauchen `DB_PASSWORD`; die Ghost-Deklaration lädt es via `ENV_FILE=%STACKS_DIR%/ghost/.env`. Für castopod bei Bedarf in `services.d/castopod.env` ergänzen:
 ```bash
-grep '^DB_PASSWORD=' /opt/docker/arcane/projects/ghost/.env
-```
-Für castopod analog `MYSQL_PASSWORD` — falls der Dump ohne Passwort scheitert, in `backup/services.d/castopod.env` ergänzen:
-```bash
-ENV_FILE=/opt/docker/arcane/projects/castopod/.env
+ENV_FILE=%STACKS_DIR%/castopod/.env
 DB_PASSWORD_VAR=MYSQL_PASSWORD
 ```
 
 ## Schritt 4: Trockenlauf (verändert nichts)
 
 ```bash
-cd /opt/docker/arcane/backup
-sudo ./backup.sh --dry-run
+sudo /opt/docker/backup/backup.sh --dry-run
 ```
-Erwartung: pro Service `[DRY]`-Zeilen mit den exakten `docker exec`/rsync-Befehlen, am Ende `OK=40 FAIL=0 SKIP=3`. `WARN`-Zeilen zu fehlenden Pfaden/Containern bedeuten Abweichungen zwischen Deklaration und Host — vor dem echten Lauf prüfen und Deklaration korrigieren oder als bereits dokumentierte Lücke akzeptieren (siehe `docs/QUESTIONS.md`).
+Erwartung: pro Service `[DRY]`-Zeilen mit exakten `docker exec`/rsync-Befehlen, am Ende `OK=40 FAIL=0 SKIP=3`. `WARN` zu fehlenden Pfaden = Abweichung zwischen Deklaration und Host — prüfen oder als dokumentierte Lücke akzeptieren (`docs/QUESTIONS.md`).
 
-## Schritt 5: Begrenzter erster echter Lauf (ein kleiner Service)
+## Schritt 5: Begrenzter erster echter Lauf
 
 ```bash
-sudo ./backup.sh --service litellm
-sudo ls -la /mnt/systems/backups/ovi/litellm/db/*/ /mnt/systems/backups/ovi/litellm/files/*/
+sudo /opt/docker/backup/backup.sh --service litellm
+sudo ls -la /mnt/systems/backups/ovi/litellm/db/*/
 ```
-Prüfen: Dump ist nicht-leer (`*.sql.gz`), Log zeigt `[OK]`.
 
 ## Schritt 6: Voller Testrun
 
 ```bash
-sudo ./backup.sh
+sudo /opt/docker/backup/backup.sh
+sudo grep FAIL /mnt/systems/backups/ovi/_meta/runs/<neuester-stamp>.log
 ```
-- Einzelfehler isolieren: `sudo grep FAIL /mnt/systems/backups/ovi/_meta/runs/<neuester-stamp>.log`
-- Exit-Code 0 = alle Services OK; einzelne FAILs beenden andere Services nicht (Fehler-Isolation pro Service).
-- Typische erste-Lauf-Fälle:
-  - DB-Container ohne laufende Healthcheck-Auth → `wait_for_postgres` protokolliert, Dump wird nachgeholt
-  - SQLite-Apps mit Stop-Fenster (arr-Stack, Home Assistant, Mealie, Kuma …) sind kurz down (Sekunden bis wenige Minuten); Lauf daher nachts cron-fähig
+Einzelfehler isolieren andere Services nicht (Fehler-Isolation pro Deklaration). Stop-Fenster-Services (arr-Stack, Home Assistant, Mealie, Kuma …) sind kurz down — nachts cron-fähig.
 
-## Schritt 7: Restore-Test (Proof, dass Dumps nutzbar sind)
+## Schritt 7: Restore-Test
 
 ```bash
-sudo ./test-restore.sh          # default: litellm
-sudo ./test-restore.sh --all     # alle Postgres-Services
+sudo /opt/docker/backup/test-restore.sh          # default: litellm
+sudo /opt/docker/backup/test-restore.sh --all   # alle Postgres-Services
 ```
-Erwartung: `[OK] <svc>: Restore-Test BESTANDEN (N Tabellen ...)` — Dump wird in Wegwerf-Postgres eingespielt, Produktiv-DB unberührt.
 
 ## Schritt 8: Cron-Aktivierung
 
 ```bash
 sudo crontab -e
 ```
-Eintragen:
 ```cron
-# DB-Dumps taeglich 02:00 (versetzt zu Immich-internen 02:00-Dumps um Kollision zu vermeiden -> 02:30 siehe Strategie)
-0 2 * * * /opt/docker/arcane/backup/backup.sh --only-db >> /mnt/systems/backups/ovi/_meta/cron.log 2>&1
-# Datei-Backups taeglich 02:30 (im selben Lauf gemaess Strategie nach den DBs)
-30 2 * * * /opt/docker/arcane/backup/backup.sh >> /mnt/systems/backups/ovi/_meta/cron.log 2>&1
-# Config-only woechentlich Sonntag 03:00
-0 3 * * 0 /opt/docker/arcane/backup/backup.sh --only-config >> /mnt/systems/backups/ovi/_meta/cron.log 2>&1
+0 2 * * * /opt/docker/backup/backup.sh --only-db >> /mnt/systems/backups/ovi/_meta/cron.log 2>&1
+30 2 * * * /opt/docker/backup/backup.sh >> /mnt/systems/backups/ovi/_meta/cron.log 2>&1
+0 3 * * 0 /opt/docker/backup/backup.sh --only-config >> /mnt/systems/backups/ovi/_meta/cron.log 2>&1
 ```
-Hinweis: `flock` ist im Dispatcher eingebaut (parallele Läufe blockiert). Nach dem Testrun die Cron-Zeiten gegen die tatsächliche Laufzeit prüfen (große rsync-Ziele wie `/mnt/immich` können den 02:30-Lauf überlappen — ggf. Immich-Dateianteil auf wöchentlich umstellen, siehe QUESTIONS.md #13).
+`flock` ist im Dispatcher eingebaut (parallele Läufe blockiert). Nach dem Testrun Cron-Zeiten gegen die tatsächliche Laufzeit prüfen (große rsync-Ziele wie `/mnt/immich` — ggf. Immich-Dateianteil wöchentlich, QUESTIONS.md #13).
 
 ## Schritt 9: Restic (optional)
 
 ```bash
 sudo apt-get install -y restic
 sudo sh -c 'openssl rand -base64 32 > /etc/restic-password && chmod 600 /etc/restic-password'
-# in /etc/backup.conf: USE_RESTIC=true setzen
+# in /etc/backup.conf: USE_RESTIC=true
 ```
-Wichtig: Passwortdatei zusätzlich ins Offsite-Sicherungskonzept (nicht nur auf ovi selbst).
 
 ## Monitoring & Betrieb
 
-- Letzter Lauf: `cat /mnt/systems/backups/ovi/_meta/last-run-summary.txt` (`OK=x FAIL=y SKIP=z`)
-- Logs: `ls -t /mnt/systems/backups/ovi/_meta/runs/ | head -1` dann Datei ansehen
-- Ein Service manuell nachziehen: `sudo ./backup.sh --service <name>`
-- Restore: `docs/RESTORE.md` und `sudo ./restore.sh <name> --dry-run` zuerst
+- Letzter Lauf: `cat /mnt/systems/backups/ovi/_meta/last-run-summary.txt`
+- Logs: `ls -t /mnt/systems/backups/ovi/_meta/runs/ | head -1`
+- Service nachziehen: `sudo /opt/docker/backup/backup.sh --service <name>`
+- Restore: `docs/RESTORE.md`, zuerst `--dry-run`
+
+## Updates des Backup-Systems
+
+Repo-Änderungen (neue Deklarationen, Fixes) einspielen:
+```bash
+cd /opt/docker/arcane && sudo git pull
+sudo backup/install.sh --stacks-dir /opt/docker/arcane/projects --backup-root /mnt/systems/backups/ovi
+```
+`install.sh` aktualisiert die Installation (rsync ohne `--delete`: lokal angepasste Deklarationen bleiben erhalten).
 
 ## Sicherheitshinweise
 
-- Der Dispatcher läuft als root (Zugriff auf `/opt/docker`, Docker-Socket, Stop-Fenster). Cron-Dateien und `/etc/backup.conf` mit `chmod 600` schützen.
-- Passwörter werden nie auf Prozess-Kommandozeilen sichtbar (`MYSQL_PWD` via `docker exec -e`), Dumps liegen unverschlüsselt auf dem NAS — bei Bedarf Restic aktivieren (verschlüsselt das Repo).
-- Bei abgemountetem NAS verweigert der Dispatcher den Start (`require_mounted_target`), statt lokal zu schreiben.
+- Dispatcher läuft als root (Docker-Socket, Stop-Fenster). `/etc/backup.conf` mit `chmod 600`.
+- Passwörter nie auf Prozess-Kommandozeilen (`MYSQL_PWD` via `docker exec -e`), Dumps unverschlüsselt auf dem NAS — bei Bedarf Restic aktivieren.
+- Bei abgemountetem NAS verweigert der Dispatcher den Start (`require_mounted_target`) statt lokal zu schreiben.

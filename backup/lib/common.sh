@@ -10,8 +10,13 @@ fi
 set -o pipefail
 
 # --- Konfiguration (kann durch /etc/backup.conf ueberschrieben werden) ---
+# BACKUP_ROOT: Ziel (NAS)
+# STACKS_DIR:   Quelle der Compose-Stacks und deren .env-Dateien (z.B. /opt/docker/arcane/projects)
+#               Deklarationen koennen den Platzhalter %STACKS_DIR% nutzen.
+# SERVICES_DIR: Heimat der Service-Deklarationen (Default: neben diesem Skript)
 BACKUP_ROOT="${BACKUP_ROOT:-/mnt/systems/backups/ovi}"
 RESTIC_ROOT="${RESTIC_ROOT:-/mnt/systems/backups/ovi/restic}"
+STACKS_DIR="${STACKS_DIR:-}"
 DRY_RUN="${DRY_RUN:-false}"
 VERBOSE="${VERBOSE:-false}"
 USE_RESTIC="${USE_RESTIC:-false}"
@@ -101,6 +106,10 @@ load_declaration() {
   if [[ -z "${SVC_CATEGORY:-}" ]]; then
     log_fail "$SVC_NAME: SVC_CATEGORY fehlt in $file"
     return 1
+  fi
+  # Platzhalter %STACKS_DIR% in ENV_FILE aufloesen (Quelle der Stacks ist konfigurierbar)
+  if [[ -n "${ENV_FILE:-}" && -n "${STACKS_DIR:-}" ]]; then
+    ENV_FILE="${ENV_FILE//%STACKS_DIR%/$STACKS_DIR}"
   fi
   # Passwoerter aus Stack-.env nachladen (nur falls ENV_FILE gesetzt und lesbar)
   if [[ -n "${ENV_FILE:-}" ]]; then
