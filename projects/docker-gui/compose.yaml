@@ -1,0 +1,48 @@
+services:
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:latest
+    command: -H unix:///var/run/docker.sock
+    entrypoint:
+      - /portainer
+    environment:
+      - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - VIRTUAL_HOST=portainer.islasorna.de
+      - VIRTUAL_PORT=9000
+      - TZ=Europe/Berlin
+    ports:
+      - 9000:9000/tcp
+      - 9443:9443/tcp
+    networks:
+      - shared_proxy
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/docker/dockerfiles:/dockerfiles
+      - /opt/docker/portainer:/data
+    working_dir: /
+
+  dockge:
+    container_name: dockge
+    image: louislam/dockge:latest
+    restart: unless-stopped
+    ports:
+      - 5001:5001
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/docker/dockge/data:/app/data
+      # Stacks Directory
+      - /opt/docker/stacks:/opt/docker/stacks
+    environment:
+      # Tell Dockge where to find the stacks
+      - DOCKGE_STACKS_DIR=/opt/docker/stacks
+    networks:
+      - shared_proxy
+
+volumes:
+  # Core
+  repo-cache:
+
+networks:
+  shared_proxy:
+    external: true

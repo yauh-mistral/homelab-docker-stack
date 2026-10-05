@@ -1,0 +1,17 @@
+services:
+  vaultwarden:
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - /opt/docker/vaultwarden:/data/
+    networks:
+      - shared_proxy
+#    ports:
+#      - '8077:80'
+
+networks:
+  shared_proxy:
+    external: true

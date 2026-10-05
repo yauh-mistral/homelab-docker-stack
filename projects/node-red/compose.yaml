@@ -1,0 +1,21 @@
+version: "3.7"
+
+services:
+  node-red:
+    image: nodered/node-red:latest
+    container_name: node-red
+    environment:
+      - TZ=Europe/Berlin
+      - CERT_NAME=wildcardislanublar.local
+      - VIRTUAL_HOST=nodered.islanublar.local
+    ports:
+      - "1880:1880"
+    networks:
+      - shared_proxy
+    restart: always
+    volumes:
+      - /opt/docker/node-red:/data
+
+networks:
+  shared_proxy:
+    external: true

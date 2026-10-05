@@ -1,0 +1,168 @@
+version: "3.8"
+
+services:
+  # Paperless-ngx broker (Redis)
+  paperless-broker:
+    image: docker.io/library/redis:7
+    container_name: ${COMPOSE_PROJECT_NAME}-broker
+    restart: unless-stopped
+    volumes:
+      - ${DOCKER_DATA_PATH}/paperless/redis:/data
+    networks:
+      - paperless
+
+  # Paperless-ngx database (PostgreSQL)
+  paperless-db:
+    image: docker.io/library/postgres:15
+    container_name: ${COMPOSE_PROJECT_NAME}-db
+    restart: unless-stopped
+    volumes:
+      - ${DOCKER_DATA_PATH}/paperless/db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${PAPERLESS_DB_NAME:-paperless}
+      POSTGRES_USER: ${PAPERLESS_DB_USER:-paperless}
+      POSTGRES_PASSWORD: ${PAPERLESS_DB_PASSWORD}
+    networks:
+      - paperless
+
+  # Paperless-ngx web application
+  paperless-webserver:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-webserver
+    restart: unless-stopped
+    depends_on:
+      - paperless-db
+      - paperless-broker
+    expose:
+      - "8000"
+    volumes:
+      - ${NAS_DATA_PATH}/data:/usr/src/paperless/data
+      - ${NAS_DATA_PATH}/media:/usr/src/paperless/media
+      - ${NAS_DATA_PATH}/export:/usr/src/paperless/export
+      - /opt/downloads/paperless:/usr/src/paperless/consume
+    environment:
+      # Timezone and User
+      TZ: ${TZ}
+      PUID: ${PUID}
+      PGID: ${PGID}
+      
+      # Nginx reverse proxy configuration
+      VIRTUAL_HOST: ${VIRTUAL_HOST}
+      VIRTUAL_PORT: 8000
+      
+      # Redis
+      PAPERLESS_REDIS: redis://paperless-broker:6379
+      
+      # Database
+      PAPERLESS_DBHOST: paperless-db
+      PAPERLESS_DBNAME: ${PAPERLESS_DB_NAME:-paperless}
+      PAPERLESS_DBUSER: ${PAPERLESS_DB_USER:-paperless}
+      PAPERLESS_DBPASS: ${PAPERLESS_DB_PASSWORD}
+      
+      # General settings
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
+      PAPERLESS_URL: https://${VIRTUAL_HOST}
+      PAPERLESS_TIME_ZONE: ${TZ}
+      PAPERLESS_OCR_LANGUAGE: ${PAPERLESS_OCR_LANGUAGE:-eng}
+      
+      # Trusted origins for reverse proxy
+      PAPERLESS_ALLOWED_HOSTS: ${VIRTUAL_HOST}
+      PAPERLESS_CORS_ALLOWED_HOSTS: https://${VIRTUAL_HOST}
+      PAPERLESS_CSRF_TRUSTED_ORIGINS: https://${VIRTUAL_HOST}
+      
+      # Admin user
+      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER:-admin}
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD}
+      PAPERLESS_ADMIN_MAIL: ${PAPERLESS_ADMIN_MAIL:-admin@example.com}
+      
+      # AI Configuration via Portkey
+      PAPERLESS_ENABLE_ML: ${PAPERLESS_ENABLE_ML:-true}
+      PAPERLESS_APPS: allauth.socialaccount.providers.openid_connect
+      
+      # Aktiviere Auto-Tagging und ML Features
+      PAPERLESS_CONSUMER_ENABLE_BARCODES: ${PAPERLESS_CONSUMER_ENABLE_BARCODES:-true}
+      PAPERLESS_CONSUMER_BARCODE_SCANNER: PYZBAR
+      
+      # Auto-Matching für Tags, Korrespondenten und Dokumenttypen
+      PAPERLESS_AUTO_MATCH_ALGORITHM: ${PAPERLESS_AUTO_MATCH_ALGORITHM:-auto}
+      
+      # Filename Formatting
+      PAPERLESS_FILENAME_FORMAT: ${PAPERLESS_FILENAME_FORMAT}
+      PAPERLESS_FILENAME_FORMAT_REMOVE_NONE: ${PAPERLESS_FILENAME_FORMAT_REMOVE_NONE:-true}
+
+      # OpenAI API configuration through Portkey
+      OPENAI_API_KEY: ${PORTKEY_API_KEY}
+      OPENAI_API_BASE: ${PORTKEY_API_BASE:-https://api.portkey.ai/v1}
+      
+      # Additional Portkey headers (passed as custom headers)
+      PAPERLESS_CONSUMER_ENABLE_ASN_BARCODE: ${PAPERLESS_CONSUMER_ENABLE_ASN_BARCODE:-false}
+      
+      # Tika (optional, for better text extraction)
+      PAPERLESS_TIKA_ENABLED: ${PAPERLESS_TIKA_ENABLED:-true}
+      PAPERLESS_TIKA_ENDPOINT: http://tika:9998
+      PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
+      
+      # User permissions
+      USERMAP_UID: ${PUID}
+      USERMAP_GID: ${PGID}
+      
+      # Use X-Forwarded headers from nginx
+      PAPERLESS_USE_X_FORWARD_HOST: true
+      PAPERLESS_USE_X_FORWARD_PORT: true
+    networks:
+      - paperless
+      - shared_proxy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Tika for document parsing (optional but recommended)
+  tika:
+    image: apache/tika:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-tika
+    restart: unless-stopped
+    networks:
+      - paperless
+
+  # Gotenberg for PDF conversion (optional but recommended)
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: ${COMPOSE_PROJECT_NAME}-gotenberg
+    restart: unless-stopped
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=file:///tmp/.*"
+    networks:
+      - paperless
+
+  paperless-ai:
+    image: clusterzx/paperless-ai
+    container_name: paperless-ai
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges=true
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-999}
+      - PAPERLESS_AI_PORT=${PAPERLESS_AI_PORT:-3000}
+      - RAG_SERVICE_URL=http://localhost:8000
+      - RAG_SERVICE_ENABLED=true
+      - VIRTUAL_HOST=${PAPERLESS_AI_VIRTUAL_HOST}
+    ports:
+      - "3631:${PAPERLESS_AI_PORT:-3000}"
+    volumes:
+      - /opt/docker/paperless-ai:/app/data
+    networks:
+      - paperless
+      - shared_proxy
+
+networks:
+  paperless:
+    driver: bridge
+  shared_proxy:
+    external: true

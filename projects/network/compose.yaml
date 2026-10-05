@@ -1,0 +1,39 @@
+services:
+
+  omada-controller:
+    container_name: omada-controller
+    image: mbentley/omada-controller:6
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - TZ=${TZ}
+      - VIRTUAL_HOST=omada.islasorna.de
+      - VIRTUAL_PORT=8043
+      - VIRTUAL_PROTO=https
+    ports:
+      # Omada Device Management & Discovery (Required for APs/Switches)
+      - "29810:29810/udp"
+      - "29811:29811/tcp"
+      - "29812:29812/tcp"
+      - "29813:29813/tcp"
+      - "29814:29814/tcp"
+      - "29817:29817/tcp"
+      - "27001:27001/udp"
+      # Direct local LAN access to Web UI (Bypasses reverse proxy if needed)
+      - "8043:8043/tcp"
+    volumes:
+      - /opt/docker/omada/work:/opt/tplink/EAPController/work:rw
+      - /opt/docker/omada/logs:/opt/tplink/EAPController/logs:rw
+      - /opt/docker/omada/data:/opt/tplink/EAPController/data:rw
+    networks:
+      - shared_proxy
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+
+networks:
+  shared_proxy:
+    external: true

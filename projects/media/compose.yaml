@@ -1,0 +1,98 @@
+version: "3"
+services:
+  plex:
+    container_name: plex
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VERSION=docker
+      - VIRTUAL_HOST=plex.islanublar.de
+      - VIRTUAL_PORT=32400
+      - NETWORK_ACCESS=external
+      - PLEX_CLAIM=claim-aHsYRvWzyexvHyqzMp3z
+    image: linuxserver/plex:latest
+    devices:
+      - /dev/dri:/dev/dri
+    network_mode: host
+    restart: always
+    volumes:
+      - /opt/docker/plex/conf:/config
+      - /mnt/media/video/tv:/tv
+      - /mnt/media/video/movies:/movies
+      - /mnt/media/video/fitness:/fitness
+      - /mnt/media/video/youtube:/youtube
+      - /mnt/media/video/learning:/learning
+      - /mnt/media/music/lidarr:/music
+      - /mnt/media/audiobooks/audiobooks:/audiobooks
+  tautulli:
+    container_name: tautulli
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=tautulli.islasorna.de
+    image: tautulli/tautulli:latest
+    networks:
+      - shared_proxy
+    ports:
+      - '8181:8181'
+    restart: unless-stopped
+    volumes:
+      - /opt/docker/tautulli:/config:rw
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: audiobookshelf
+    restart: unless-stopped
+    networks:
+      - shared_proxy
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=audiobooks.islanublar.de
+    ports:
+      - 13378:80
+    volumes:
+      - /mnt/media/audiobooks/audiobooks:/audiobooks
+      - /mnt/media/audiobooks/podcasts:/podcasts
+      - /opt/docker/audiobookshelf/config:/config
+      - /opt/docker/audiobookshelf/metadata:/metadata
+  metube:
+    image: ghcr.io/alexta69/metube
+    container_name: metube
+    restart: unless-stopped
+    ports:
+      - "8021:8081"
+    volumes:
+      - /mnt/media/video/youtube:/downloads
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=metube.islasorna.de
+    networks:
+      - shared_proxy
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:latest
+    container_name: calibre-web
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - DOCKER_MODS=linuxserver/mods:universal-calibre #optional
+      - OAUTHLIB_RELAX_TOKEN_SCOPE=1 #optional
+      - VIRTUAL_HOST=calibre.islasorna.de
+    volumes:
+      - /opt/docker/calibre-web:/config
+      - /mnt/media/library/calibre:/books
+    networks:
+      - shared_proxy
+    ports:
+      - 8083:8083
+    restart: unless-stopped
+
+
+networks:
+  shared_proxy:
+    external: true

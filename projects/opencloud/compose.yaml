@@ -1,0 +1,78 @@
+version: "3.8"
+# WORKING OPENCLOUD SINGLE CONTAINER
+
+services:
+  opencloud:
+    image: opencloudeu/opencloud-rolling:latest
+    container_name: opencloud
+    networks:
+      - shared_proxy
+    restart: unless-stopped
+    environment:
+      # Use the full URL your proxy will serve (e.g., https://cloud.example.com)
+      - OC_URL=https://cloud.islanublar.de
+      - VIRTUAL_HOST=cloud.islanublar.de
+      - PUID=${PUID}
+      - PGID=${PGID}
+
+      # --- DISABLE ALL INTERNAL TLS ---
+      - PROXY_TLS=false
+      - IDP_TLS=false
+      - WEB_TLS=false
+      - OCIS_HTTP_TLS_ENABLED=false
+      - OCIS_GRPC_CLIENT_TLS_MODE=off
+
+      # SMTP MAIL
+      - OC_ADD_RUN_SERVICES="notifications"
+      - NOTIFICATIONS_SMTP_HOST=${SMTP_HOST}
+      - NOTIFICATIONS_SMTP_PORT=${SMTP_PORT}
+      - NOTIFICATIONS_SMTP_SENDER="OpenCloud <artie.isaacs@islanublar.de>"
+      - NOTIFICATIONS_SMTP_USERNAME=${SMTP_USERNAME}
+      - NOTIFICATIONS_SMTP_PASSWORD=${SMTP_PASSWORD}
+      - NOTIFICATIONS_SMTP_INSECURE=${SMTP_INSECURE}
+      - NOTIFICATIONS_SMTP_AUTHENTICATION=${SMTP_AUTHENTICATION}
+      - NOTIFICATIONS_SMTP_ENCRYPTION=${SMTP_TRANSPORT_ENCRYPTION}
+      
+      # OpenCloud specific mail logic
+      - SMTP_AUTHENTICATION=plain
+      - SMTP_TRANSPORT_ENCRYPTION=tls
+      - SMTP_INSECURE=false
+      
+      # Tell OpenCloud it is behind a proxy
+      - OC_INSECURE=true
+      
+      # The internal address the service listens on
+      - PROXY_HTTP_ADDR=0.0.0.0:9200
+      
+      # This skips the interactive setup on first run
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
+
+      - OC_JWT_SECRET=1f1ab9f517ab473f5dfdb9a38687ff5e
+      - PROXY_JWT_SECRET=440494a82f869359168e7b8a0736dfbd
+      - STORAGE_TRANSFER_SECRET=59c1fcfef040a38dd140b07e13fb2d79
+      
+      # Set your local timezone
+      - TZ=${TZ}
+
+      # --- DISABLE XATTR DEPENDENCY ---
+      - STORAGE_USERS_OCIS_METADATA_BACKEND=messagepack
+      - STORAGE_SYSTEM_OCIS_METADATA_BACKEND=messagepack
+      - STORAGE_SHARES_OCIS_METADATA_BACKEND=messagepack
+      # Ensure it doesn't try to use the legacy "posix" driver which requires xattrs
+      - STORAGE_USERS_DRIVER=ocis
+      #- STORAGE_USERS_DRIVER=posix
+      #- STORAGE_USERS_ID_CACHE_STORE=nats-js-kv
+    volumes:
+      - /mnt/opencloud:/var/lib/opencloud
+      - /opt/docker/opencloud/:/etc/opencloud
+    # Map port 9200 to your host so your existing Nginx can find it
+    ports:
+      - "9200:9200"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - "opencloud init || true; opencloud server"
+
+networks:
+  shared_proxy:
+    external: true

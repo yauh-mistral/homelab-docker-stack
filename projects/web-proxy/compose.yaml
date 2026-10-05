@@ -1,0 +1,176 @@
+version: '3.8'
+
+services:
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy
+    container_name: ${COMPOSE_PROJECT_NAME}-nginx
+    restart: unless-stopped
+    environment:
+      - TRUST_DOWNSTREAM_PROXY=${PROXY_TRUST_DOWNSTREAM}
+      - NGINX_PROXY_CONTAINER_MODIFICATION=${NGINX_MODIFICATION}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${NGINX_BASE_PATH}/staticfiles:/static:ro
+      - ${NGINX_BASE_PATH}/mediafiles:/media:ro
+      - ${NGINX_BASE_PATH}/conf:/etc/nginx/conf.d
+      - ${NGINX_BASE_PATH}/vhost:/etc/nginx/vhost.d
+      - ${NGINX_BASE_PATH}/html:/usr/share/nginx/html
+      - ${NGINX_BASE_PATH}/certs:/etc/nginx/certs:ro
+      - ${NGINX_BASE_PATH}/htpasswd:/etc/nginx/htpasswd
+      - ${NGINX_BASE_PATH}/logs:/var/log/nginx
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - proxy_net
+      - shared_proxy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  acme-companion:
+    image: nginxproxy/acme-companion
+    container_name: ${COMPOSE_PROJECT_NAME}-acme
+    restart: unless-stopped
+    environment:
+      DEFAULT_EMAIL: ${ACME_DEFAULT_EMAIL}
+      NGINX_PROXY_CONTAINER: ${COMPOSE_PROJECT_NAME}-nginx
+      DEBUG: ${ACME_DEBUG}
+      DEDYN_TOKEN: ${DESEC_TOKEN}
+      ACME_CHALLENGE: DNS-01
+      ACMESH_DNS_API_CONFIG: |-
+        DNS_API: dns_desec
+        DESEC_TOKEN: ${DESEC_TOKEN}
+    volumes:
+      - ${ACME_BASE_PATH}:/etc/acme.sh
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${NGINX_BASE_PATH}/conf:/etc/nginx/conf.d
+      - ${NGINX_BASE_PATH}/vhost:/etc/nginx/vhost.d
+      - ${NGINX_BASE_PATH}/html:/usr/share/nginx/html
+      - ${NGINX_BASE_PATH}/certs:/etc/nginx/certs:rw
+    networks:
+      - proxy_net
+      - shared_proxy
+    depends_on:
+      nginx-proxy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "test -d /etc/acme.sh && pgrep -f docker-gen || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+
+  # Wildcard certificate requesters (separated per domain family)
+  cert-islanublar:
+    image: alpine
+    container_name: cert-islanublar
+    restart: unless-stopped
+    environment:
+      - VIRTUAL_HOST=dummy.islanublar.de
+      - LETSENCRYPT_HOST=*.islanublar.de,islanublar.de
+      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
+    networks:
+      - shared_proxy
+    depends_on:
+      acme-companion:
+        condition: service_started
+    command: ["sh", "-c", "sleep infinity"]
+
+  cert-islasorna:
+    image: alpine
+    container_name: cert-islasorna
+    restart: unless-stopped
+    environment:
+      - VIRTUAL_HOST=dummy.islasorna.de
+      - LETSENCRYPT_HOST=*.islasorna.de,islasorna.de
+      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
+    networks:
+      - shared_proxy
+    depends_on:
+      acme-companion:
+        condition: service_started
+    command: ["sh", "-c", "sleep infinity"]
+
+  cert-herrhochhaus:
+    image: alpine
+    container_name: cert-herrhochhaus
+    restart: unless-stopped
+    environment:
+      - VIRTUAL_HOST=dummy.herrhochhaus.de
+      - LETSENCRYPT_HOST=*.herrhochhaus.de,herrhochhaus.de
+      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
+    networks:
+      - shared_proxy
+    depends_on:
+      acme-companion:
+        condition: service_started
+    command: ["sh", "-c", "sleep infinity"]
+
+  cert-yauh:
+    image: alpine
+    container_name: cert-yauh
+    restart: unless-stopped
+    environment:
+      - VIRTUAL_HOST=dummy.yauh.de
+      - LETSENCRYPT_HOST=*.yauh.de,yauh.de
+      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
+    networks:
+      - shared_proxy
+    depends_on:
+      acme-companion:
+        condition: service_started
+    command: ["sh", "-c", "sleep infinity"]
+
+  cert-geekcast:
+    image: alpine
+    container_name: cert-geekcast
+    restart: unless-stopped
+    environment:
+      - VIRTUAL_HOST=dummy.geekcast.de
+      - LETSENCRYPT_HOST=*.geekcast.de,geekcast.de
+      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
+    networks:
+      - shared_proxy
+    depends_on:
+      acme-companion:
+        condition: service_started
+    command: ["sh", "-c", "sleep infinity"]
+
+  cert-letstalkgeek:
+    image: alpine
+    container_name: cert-letstalkgeek
+    restart: unless-stopped
+    environment:
+      - VIRTUAL_HOST=dummy.letstalkgeek.de
+      - LETSENCRYPT_HOST=*.letstalkgeek.de,letstalkgeek.de
+      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
+    networks:
+      - shared_proxy
+    depends_on:
+      acme-companion:
+        condition: service_started
+    command: ["sh", "-c", "sleep infinity"]
+
+  yauh:
+    image: nginx:alpine
+    container_name: yauh
+    restart: unless-stopped
+    environment:
+      - VIRTUAL_HOST=yauh.de,www.yauh.de
+      - LETSENCRYPT_HOST=yauh.de,www.yauh.de
+      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
+      - VIRTUAL_PORT=80
+    volumes:
+      - /opt/docker/yauh:/usr/share/nginx/html:ro
+    networks:
+      - shared_proxy
+
+networks:
+  proxy_net:
+    driver: bridge
+  shared_proxy:
+    external: true

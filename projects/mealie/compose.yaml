@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  mealie:
+    image: hkotel/mealie:latest
+    container_name: mealie
+    networks:
+      - shared_db
+      - shared_proxy
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - BASE_URL=https://recipes.islanublar.de # Important for reverse proxy
+      - DB_ENGINE=postgres
+      - POSTGRES_SERVER=192.168.0.15
+      - POSTGRES_PORT=5400
+      - POSTGRES_USER=mealieuser
+      - POSTGRES_PASSWORD=j9aPeId9ojTh!dfl00dEqX # Replace with a strong password
+      - POSTGRES_DB=mealie
+      - SECRET_KEY=your_mealie_secret_key # Replace with a strong secret key
+      - VIRTUAL_HOST=recipes.islanublar.de
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_FROM_NAME=Mealie
+      - SMTP_AUTH_STRATEGY=TLS
+      - SMTP_FROM_EMAIL=${SMTP_FROM}
+      - SMTP_USER=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+    ports:
+      - 9925:9000 # Expose Mealie's port (internal)
+    volumes:
+      - /opt/docker/mealie/data:/app/data
+
+networks:
+  shared_db:
+    external: true
+  shared_proxy:
+    external: true

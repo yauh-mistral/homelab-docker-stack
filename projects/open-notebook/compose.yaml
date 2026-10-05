@@ -1,0 +1,42 @@
+services:
+  surrealdb:
+    image: surrealdb/surrealdb:v2
+    command: start --user root --pass Surr3AlIstC5 --bind 0.0.0.0:8000 rocksdb:/mydata/mydatabase.db
+    networks:
+      - open_notebook
+    ports:
+      - "8000:8000"
+    volumes:
+      - /opt/docker/open-notebook/surreal:/mydata
+
+  open_notebook:
+    image: lfnovo/open_notebook:v1-latest
+    pull_policy: always
+    networks:
+      - open_notebook
+      - shared_proxy
+    ports:
+      - "8502:8502"  # Web UI (React frontend)
+      - "5053:5055"  # API (required!)
+    environment:
+      # Encryption key for credential storage (required)
+      - OPEN_NOTEBOOK_ENCRYPTION_KEY=AH0rSe1SaH0753OfFKuRts
+
+      # Database (required)
+      - SURREAL_URL=ws://surrealdb:8000/rpc
+      - SURREAL_USER=root
+      - SURREAL_PASSWORD= Surr3AlIstC5
+      - SURREAL_NAMESPACE=open_notebook
+      - SURREAL_DATABASE=open_notebook
+      - VIRTUAL_HOST=notebook.islasorna.de
+      - VIRTUAL_PORT=8502
+    volumes:
+      - /opt/docker/open-notebook/data:/app/data
+    depends_on:
+      - surrealdb
+    restart: always
+
+networks:
+  open_notebook:
+  shared_proxy:
+    external: true

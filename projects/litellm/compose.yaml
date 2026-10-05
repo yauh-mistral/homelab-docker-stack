@@ -1,0 +1,53 @@
+services:
+  litellm_db:
+    image: postgres:16-alpine
+    container_name: litellm_db
+    restart: unless-stopped
+    networks:
+      - litellm_net
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - /opt/docker/litellm/postgres_data:/var/lib/postgresql/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: litellm
+    restart: unless-stopped
+    depends_on:
+      litellm_db:
+        condition: service_healthy
+    networks:
+      - litellm_net
+      - shared_proxy
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@litellm_db:5432/${POSTGRES_DB}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - UI_USERNAME=${UI_USERNAME}
+      - UI_PASSWORD=${UI_PASSWORD}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - VIRTUAL_HOST=${LITELLM_DOMAIN}
+      - VIRTUAL_PORT=4000
+      - LITELLM_DISABLE_NO_REDIS_WARNING=true
+    volumes:
+      - /opt/docker/litellm/config.yaml:/app/config.yaml
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--detailed_debug"]
+
+networks:
+  litellm_net:
+    driver: bridge
+  shared_proxy:
+    external: true

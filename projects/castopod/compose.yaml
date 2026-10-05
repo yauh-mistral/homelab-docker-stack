@@ -1,0 +1,85 @@
+version: "3.8"
+
+services:
+  app:
+    image: castopod/castopod:latest
+    container_name: castopod_app
+    restart: unless-stopped
+    expose:
+      - "8080"
+    volumes:
+      - /opt/docker/castopod/app/media:/app/public/media
+    environment:
+      CP_ENVIRONMENT: ${CP_ENVIRONMENT}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      CP_BASEURL: ${CP_BASEURL}
+      CP_ANALYTICS_SALT: ${CP_ANALYTICS_SALT}
+      CP_CACHE_HANDLER: ${CP_CACHE_HANDLER}
+      CP_DATABASE_HOSTNAME: mariadb
+      CP_DATABASE_NAME: ${MYSQL_DATABASE}
+      CP_DATABASE_USERNAME: ${MYSQL_USER}
+      CP_DATABASE_PASSWORD: ${MYSQL_PASSWORD}
+      CP_DATABASE_PREFIX: ${CP_DATABASE_PREFIX}
+      CP_REDIS_HOST: ${CP_REDIS_HOST}
+      CP_REDIS_PASSWORD: ${CP_REDIS_PASSWORD}
+      CP_REDIS_PORT: ${CP_REDIS_PORT}
+      CP_REDIS_DATABASE: ${CP_REDIS_DATABASE}
+      # Email configuration
+      CP_EMAIL_SMTP_HOST: ${CP_EMAIL_SMTP_HOST}
+      CP_EMAIL_FROM: ${CP_EMAIL_FROM}
+      CP_EMAIL_SMTP_USERNAME: ${CP_EMAIL_SMTP_USERNAME}
+      CP_EMAIL_SMTP_PASSWORD: ${CP_EMAIL_SMTP_PASSWORD}
+      CP_EMAIL_SMTP_PORT: ${CP_EMAIL_SMTP_PORT}
+      CP_EMAIL_SMTP_CRYPTO: ${CP_EMAIL_SMTP_CRYPTO}
+      # Media storage (local)
+      CP_MEDIA_FILE_MANAGER: local
+      CP_MEDIA_BASE_URL: ${CP_MEDIA_BASE_URL}
+      CP_MEDIA_ROOT: ${CP_MEDIA_ROOT}
+      CP_MEDIA_S3_ENABLED: "false"
+      # Additional settings
+      CP_DISABLE_HTTPS: ${CP_DISABLE_HTTPS}
+      CP_TIMEOUT: ${CP_TIMEOUT}
+      CP_MAX_BODY_SIZE: ${CP_MAX_BODY_SIZE}
+      CP_PHP_MEMORY_LIMIT: ${CP_PHP_MEMORY_LIMIT}
+      CP_UPLOAD_MAX_FILESIZE: ${CP_UPLOAD_MAX_FILESIZE}
+      CP_POST_MAX_SIZE: ${CP_POST_MAX_SIZE}
+      VIRTUAL_HOST: ${CASTOPOD_DOMAIN},www.diepsychounddergeek.de,diepsychounddergeek.de,www.eingeekkommtseltenallein.de,eingeekkommtseltenallein.de
+      VIRTUAL_PORT: 8080
+    networks:
+      - castopod
+      - shared_proxy
+    depends_on:
+      - mariadb
+      - redis
+
+  mariadb:
+    image: mariadb:11.2
+    container_name: castopod_mariadb
+    restart: unless-stopped
+    volumes:
+      - /opt/docker/castopod/mariadb:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    networks:
+      - castopod
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: castopod_redis
+    restart: unless-stopped
+    command: >
+      --requirepass ${CP_REDIS_PASSWORD}
+    volumes:
+      - /opt/docker/castopod/redis:/data
+    networks:
+      - castopod
+
+networks:
+  castopod:
+  shared_proxy:
+    external: true
