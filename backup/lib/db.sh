@@ -27,6 +27,7 @@ dump_postgres() {
     return 0
   fi
   container_running "$DB_CONTAINER" || { log_fail "$SVC_NAME: DB-Container $DB_CONTAINER laeuft nicht"; return 1; }
+  wait_for_postgres "$DB_CONTAINER" "$DB_USER" || return 1
   mkdir -p "$dest_dir"
   if "${cmd[@]}" 2>>"$LOG_FILE" | gzip > "$out" && [[ -s "$out" ]]; then
     log_ok "$SVC_NAME: pg_dump -> $out ($(du -h "$out" | cut -f1))"
@@ -43,14 +44,18 @@ dump_mysql() {
   local dumper="mysqldump"
   docker exec "$DB_CONTAINER" sh -c 'command -v mysqldump >/dev/null 2>&1' || dumper="mariadb-dump"
   local db_args="${DB_NAME:-}"
+  local -a extra=()
+  [[ -n "${DB_DUMP_EXTRA:-}" ]] && read -r -a extra <<< "$DB_DUMP_EXTRA"
+  # Wenn DB_DUMP_EXTRA --databases nutzt, stehen die Schemas dort — DB_NAME nicht anhaengen
+  if [[ "${DB_DUMP_EXTRA:-}" == *"--databases"* ]]; then db_args=""; fi
   if [[ "$DRY_RUN" == "true" ]]; then
-    log_dry "$SVC_NAME: wuerde ausfuehren: docker exec [-e MYSQL_PWD] $DB_CONTAINER $dumper -u $DB_USER --single-transaction $db_args | gzip > $out"
+    log_dry "$SVC_NAME: wuerde ausfuehren: docker exec [-e MYSQL_PWD] $DB_CONTAINER $dumper -u $DB_USER --single-transaction ${DB_DUMP_EXTRA:-} $db_args | gzip > $out"
     return 0
   fi
   container_running "$DB_CONTAINER" || { log_fail "$SVC_NAME: DB-Container $DB_CONTAINER laeuft nicht"; return 1; }
   mkdir -p "$dest_dir"
   if docker exec -e MYSQL_PWD="${DB_PASSWORD:-}" "$DB_CONTAINER" \
-      "$dumper" -u "$DB_USER" --single-transaction --routines --triggers $db_args \
+      "$dumper" -u "$DB_USER" --single-transaction --routines --triggers "${extra[@]}" $db_args \
       2>>"$LOG_FILE" | gzip > "$out" && [[ -s "$out" ]]; then
     log_ok "$SVC_NAME: $dumper -> $out ($(du -h "$out" | cut -f1))"
     return 0

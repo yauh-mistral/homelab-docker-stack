@@ -59,6 +59,16 @@ log_init
 _acquire_lock
 log_info "Dispatcher start: ${#SVC_FILES[@]} Deklarationen, dry-run=$DRY_RUN, Ziel=$BACKUP_ROOT"
 
+# Mount-Guard: NAS-Ziel muss ein echter Mount sein, sonst schreibt das Backup
+# stillschweigend auf die lokale Platte (Katastrofall: Platte voll + falsches Ziel).
+if [[ "$DRY_RUN" != "true" ]]; then
+  if ! require_mounted_target "$BACKUP_ROOT"; then
+    log_fail "Abbruch: Backup-Ziel $BACKUP_ROOT ist nicht als NAS-Mount verfuegbar"
+    exit 1
+  fi
+  mkdir -p "$BACKUP_ROOT/_meta/runs" || { log_fail "Abbruch: Kann $BACKUP_ROOT/_meta/runs nicht anlegen"; exit 1; }
+fi
+
 # ----------------------------------------------------------------------
 # Validierungs-Phase (immer, auch im Dry-Run): Deckung mit dem Inventar
 # ----------------------------------------------------------------------
