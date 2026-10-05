@@ -49,3 +49,11 @@ Jede getroffene Annahme ist hier mit Begründung aufgelistet. Nicht schließen �
 28. **Kein Versand von Benachrichtigungen** (E-Mail/Healthchecks): Nicht gefordert, aber für einen Produktivbetrieb sinnvoll — Hook in backup.sh nachrüsten?
 29. **`.env`-Dateien des Produktsystems sind die Quelle für Passwörter** — der Dispatcher muss ggf. `source projects/<stack>/.env` vor dem Dump machen, um `DB_PASSWORD` zu haben (MySQL). Implementiert ist `DB_PASSWORD` als Variable, die aus der Deklaration ODER Umgebung kommt. Empfehlung: `/etc/backup.conf` sourced die Stack-.envs — auf ovi einrichten.
 30. **Open-Notebook-Containername unsicher** (siehe #8) und `DB_CONN=rocksdb:/mydata` vom Standard abgeleitet (compose mountet `/opt/docker/open-notebook/surreal:/mydata`, surrealdb:v2 default rocksdb) — auf ovi verifizieren.
+
+## Ergänzungen nach Review (PR 2)
+
+31. **DB-Passwort-Lademechanismus**: Neu `ENV_FILE`/`DB_PASSWORD_VAR` in Deklarationen (implementiert in `load_declaration`); liest gezielt nur die Passwort-Variable aus der Stack-`.env`, nicht die ganze Datei (Kollisionsrisiko mit Dispatcher-Variablen ausgeschlossen).
+32. **Mount-Guard**: Dispatcher verweigert Start, wenn `/mnt/systems` nicht als Mount verfügbar ist (`require_mounted_target`, `FORCE_LOCAL=true` nur für Tests).
+33. **Stop-Fenster-Rollback**: `stop_containers` startet bereits gestoppte Container zurück, wenn ein späterer Stop fehlschlägt (kein Service bleibt versehentlich down).
+34. **MySQL `DB_DUMP_EXTRA`**: wird jetzt auch für MySQL/MariaDB angewandt; Ghost dumpt damit `ghost_prod` + `ghost_activitypub` (schließt Frage #9).
+35. **Postgres-Readiness**: `wait_for_postgres` (pg_isready, 30×2s) vor jedem pg_dump — verhindert Teil-Dumps nach Host-Reboot.
