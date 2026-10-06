@@ -128,6 +128,13 @@ load_declaration() {
 }
 
 # --- Existenzpruefungen (fuer Dry-Run und echte Laeufe) ---
+# Preflight: Ist Docker ueberhaupt ansprechbar? Wenn nicht (z.B. Daemon down),
+# liefert jede container_exists-Pruefung false und alle Services waeren SKIP.
+# In dem Fall brechen wir lieber hart ab, statt stillschweigend nichts zu sichern.
+docker_available() {
+  docker info >/dev/null 2>&1
+}
+
 container_exists() {
   local name="${1:?Containername fehlt}"
   docker inspect "$name" >/dev/null 2>&1
