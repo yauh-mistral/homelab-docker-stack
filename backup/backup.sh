@@ -192,7 +192,7 @@ backup_one_service() {
     return 0
   fi
 
-  # Rotation VOR dem Schreiben: daily.0 -> daily.1 -> ... -> entfernt
+  # Rotation VOR dem Schreiben: v.0 -> v.1 -> ... -> entfernt
   if [[ "$DRY_RUN" != "true" ]]; then
     case "$SVC_CATEGORY" in
       db_only)        rotate_versions "$BACKUP_ROOT/$SVC_NAME/db" ;;
@@ -339,7 +339,7 @@ consistency_check() {
     [[ -n "${SERVICE_FILTER:-}" && "$SVC_NAME" != "$SERVICE_FILTER" ]] && continue
     case "$SVC_CATEGORY" in
       db_only|db_and_files)
-        dest="$BACKUP_ROOT/$SVC_NAME/db/daily.0"
+        dest="$BACKUP_ROOT/$SVC_NAME/db/v.0"
         if [[ ! -d "$dest" ]]; then
           log_warn "Consistency: $SVC_NAME: kein DB-Stand in $dest"
           problems=$((problems+1))
@@ -355,7 +355,7 @@ consistency_check() {
     esac
     case "$SVC_CATEGORY" in
       files_only|config_only|db_and_files)
-        dest="$BACKUP_ROOT/$SVC_NAME/files/daily.0"
+        dest="$BACKUP_ROOT/$SVC_NAME/files/v.0"
         if [[ ! -d "$dest" ]]; then
           log_warn "Consistency: $SVC_NAME: kein Datei-Stand in $dest"
           problems=$((problems+1))

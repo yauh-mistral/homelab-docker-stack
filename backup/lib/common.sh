@@ -25,7 +25,7 @@ KEEP_DAILY_DUMPS="${KEEP_DAILY_DUMPS:-30}"
 KEEP_MONTHLY_DUMPS="${KEEP_MONTHLY_DUMPS:-12}"
 KEEP_DAILY_FILES="${KEEP_DAILY_FILES:-14}"
 KEEP_WEEKLY_FILES="${KEEP_WEEKLY_FILES:-8}"
-# rsnapshot-artige Rotation: Anzahl behaltener Versionen (daily.0 .. daily.N-1)
+# rsnapshot-artige Rotation: Anzahl behaltener Versionen (v.0 .. v.N-1)
 # 0 = aktuelle Version, 1 = gestern usw. Konfigurierbar via /etc/backup.conf.
 KEEP_VERSIONS="${KEEP_VERSIONS:-14}"
 
@@ -247,21 +247,21 @@ start_containers() {
 }
 
 # --- Ziel-Pfade pro Service (rsnapshot-artige Rotation, KEINE Timestamps im Pfad) ---
-# Restore und Cron bleiben dadurch stabil: daily.0 ist immer der aktuellste Stand.
-svc_db_dir()     { echo "$BACKUP_ROOT/${1:?svc}/db/daily.0"; }
-svc_files_dir()  { echo "$BACKUP_ROOT/${1:?svc}/files/daily.0"; }
+# Restore und Cron bleiben dadurch stabil: v.0 ist immer der aktuellste Stand.
+svc_db_dir()     { echo "$BACKUP_ROOT/${1:?svc}/db/v.0"; }
+svc_files_dir()  { echo "$BACKUP_ROOT/${1:?svc}/files/v.0"; }
 
-# --- Rotation (rsnapshot-Stil): daily.N -> daily.N+1, aelteste faellt raus ---
+# --- Rotation (rsnapshot-Stil): v.N -> v.N+1, aelteste faellt raus ---
 rotate_versions() {
   local base="${1:?Basisverzeichnis fehlt}" keep="${2:-$KEEP_VERSIONS}" i
   if [[ "$DRY_RUN" == "true" ]]; then
-    log_dry "Rotation: wuerde Versionen in $base weiterschieben (daily.0..daily.$((keep-1)))"
+    log_dry "Rotation: wuerde Versionen in $base weiterschieben (v.0..v.$((keep-1)))"
     return 0
   fi
   mkdir -p "$base"
-  rm -rf "$base/daily.$((keep-1))"
+  rm -rf "$base/v.$((keep-1))"
   for ((i=keep-2; i>=0; i--)); do
-    [[ -e "$base/daily.$i" ]] && mv "$base/daily.$i" "$base/daily.$((i+1))"
+    [[ -e "$base/v.$i" ]] && mv "$base/v.$i" "$base/v.$((i+1))"
   done
   return 0
 }
@@ -309,7 +309,7 @@ rsync_backup() {
   # Hardlink-Dedupe gegen Vortagesversion (rsnapshot-Prinzip): unveraenderte
   # Dateien belegen keinen zusaetzlichen Platz, wenn das Dateisystem Hardlinks
   # unterstuetzt (NFS meist ja; CIFS oft nicht — dann stiller Fallback ohne Link).
-  local link_dest="${dest/daily.0/daily.1}"
+  local link_dest="${dest/v.0/v.1}"
   if [[ -e "$link_dest" ]]; then
     excludes+=(--link-dest="$link_dest")
   fi

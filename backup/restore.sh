@@ -3,7 +3,7 @@
 # Nutzt dieselbe Deklaration wie der Dispatcher (services.d/<service>.env).
 #
 # Usage:
-#   restore.sh <service> [--version daily.N] [--dry-run] [--db-only] [--files-only]
+#   restore.sh <service> [--version v.N] [--dry-run] [--db-only] [--files-only]
 #
 set -u
 set -o pipefail
@@ -24,8 +24,8 @@ fi
 SVC_ARG="${1:?Service-Name fehlt}"; shift
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --version)     shift; RESTORE_DATE="${1:?--version braucht daily.N (z.B. daily.2)}" ;;
-    --date)        shift; RESTORE_DATE="${1:?--date braucht daily.N}" ;;
+    --version)     shift; RESTORE_DATE="${1:?--version braucht v.N (z.B. v.2)}" ;;
+    --date)        shift; RESTORE_DATE="${1:?--date braucht v.N}" ;;
     --dry-run)     DRY_RUN=true ;;
     --db-only)     DB_ONLY=true ;;
     --files-only)  FILES_ONLY=true ;;
@@ -77,9 +77,9 @@ resolve_run_dir() {
       return 1
     fi
   else
-    # Default: daily.0 (immer der aktuellste Stand, rotationssicher)
-    if [[ -d "$base/daily.0" ]]; then
-      echo "$base/daily.0"
+    # Default: v.0 (immer der aktuellste Stand, rotationssicher)
+    if [[ -d "$base/v.0" ]]; then
+      echo "$base/v.0"
     else
       latest_dir "$base" || { log_fail "Keine Backups in $base gefunden"; return 1; }
     fi

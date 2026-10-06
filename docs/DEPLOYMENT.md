@@ -128,16 +128,16 @@ sudo crontab -e
 Ziel-Pfade enthalten **keine Timestamps** mehr. Jeder Service hat rotierende Versionen:
 
 ```text
-/mnt/systems/ovi/backups/<service>/db/daily.0     <- aktuellster Stand
-                                                  daily.1 ... daily.KEEP_VERSIONS-1
+/mnt/systems/ovi/backups/<service>/db/v.0     <- aktuellster Stand
+                                                  v.1 ... v.KEEP_VERSIONS-1
 ```
 
-- Vor jedem Backup schiebt der Dispatcher `daily.0 -> daily.1 -> ... -> daily.N-1`, die älteste Version fällt weg.
+- Vor jedem Backup schiebt der Dispatcher `v.0 -> v.1 -> ... -> v.N-1`, die älteste Version fällt weg.
 - `KEEP_VERSIONS` (Default: **14**) in `/etc/backup.conf` konfigurierbar — z.B. `KEEP_VERSIONS=30`.
-- rsync nutzt `--link-dest=daily.1`: unveränderte Dateien sind Hardlinks zum Vortag — pro Version nur echte Änderungen, Speicherbedarf bleibt flach (NFS unterstützt Hardlinks; auf CIFS läuft es ohne Verlinkung, verbraucht dann mehr Platz).
+- rsync nutzt `--link-dest=v.1`: unveränderte Dateien sind Hardlinks zum Vortag — pro Version nur echte Änderungen, Speicherbedarf bleibt flach (NFS unterstützt Hardlinks; auf CIFS läuft es ohne Verlinkung, verbraucht dann mehr Platz).
 - Timestamps stehen nicht im Pfad, sondern im Log: jede stdout- und Log-Zeile beginnt mit `YYYY-MM-DD HH:MM:SS` — Dauer einzelner Schritte direkt ablesbar.
-- Restore mit Version statt Datum: `restore.sh <service>` (neueste Version = `daily.0`) oder `restore.sh <service> --version daily.3`.
-- Am Laufende prüft der **Consistency-Check** alle Ziel-Stände: existiert `daily.0`, ist er nicht leer, enthalten DB-Stände mind. einen Dump > 0 Bytes. Probleme erscheinen als `WARN` im Log.
+- Restore mit Version statt Datum: `restore.sh <service>` (neueste Version = `v.0`) oder `restore.sh <service> --version v.3`.
+- Am Laufende prüft der **Consistency-Check** alle Ziel-Stände: existiert `v.0`, ist er nicht leer, enthalten DB-Stände mind. einen Dump > 0 Bytes. Probleme erscheinen als `WARN` im Log.
 - Alte timestamp-basierte Stände (vor dieser Umstellung) bleiben über den `latest_dir`-Fallback im Restore lesbar.
 
 ## Schritt 9: Restic (optional)

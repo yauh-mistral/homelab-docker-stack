@@ -96,7 +96,7 @@ SERVICES_DIR=$INSTALL_HOME/services.d
 # Optional: Restic (erst aktivieren, wenn restic installiert + Passwortdatei existiert)
 USE_RESTIC=false
 # RESTIC_PASSWORD_FILE=/etc/restic-password
-# Anzahl behaltener Versionen (rsnapshot-Rotation daily.0..daily.KEEP_VERSIONS-1)
+# Anzahl behaltener Versionen (rsnapshot-Rotation v.0..v.KEEP_VERSIONS-1)
 KEEP_VERSIONS=14
 EOF
   chmod 600 "$CONF_FILE"
