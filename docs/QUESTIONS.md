@@ -93,3 +93,17 @@ Jede getroffene Annahme ist hier mit Begründung aufgelistet. Nicht schließen �
 ## Korrektur Immich-DB-Dump (PR 8)
 
 53. **`DB_DUMP_ALL` rief ungültiges `pg_dump --all` auf**: `--all` existiert nur bei `pg_dumpall`, nicht bei `pg_dump` — der Immich-Dump scheiterte mit `unrecognized option`. Fix: `DB_DUMP_ALL=true` nutzt jetzt `pg_dumpall -U postgres` (kompletter Cluster inkl. Rollen/Rechte, wie es die Immich-Doku für Migrationen empfiehlt); alle anderen Postgres-Services weiter mit `pg_dump --dbname`. Der Fehler wäre im echten Lauf als FAIL sichtbar geworden — der Consistency-Check aus diesem PR hätte ihn zusätzlich über den leeren/fehlenden Dump-Stand angezeigt.
+
+## Korrektur Ghost-DB-Dump (PR 8)
+
+54. **ghost: `FLUSH TABLES` verweigert (MySQL-Fehler 1227)**: `mysqldump --single-transaction --routines --triggers` führt initial `FLUSH /*!40101 LOCAL */ TABLES` aus; dafür braucht `ghost_user` das `RELOAD`- bzw. `FLUSH_TABLES`-Privileg, das ihm fehlt. Fix ohne Rechteänderung am DB-User: `--skip-lock-tables` in `DB_DUMP_EXTRA` — die Kombination `--single-transaction --skip-lock-tables` ist für InnoDB ohnehin die empfohlene konsistente Snapshot-Konfiguration. Alternative wäre `GRANT RELOAD ON *.* TO ghost_user` gewesen; bewusst nicht gewählt, um DB-Rechte nicht für Backup-Zwecke aufzuweichen.
+
+## Korrektur Vaultwarden-SQLite (PR 8)
+
+55. **vaultwarden-Image enthaelt kein sqlite3**: `docker exec vaultwarden sqlite3 ...` schlaegt mit `exec: "sqlite3": executable file not found` fehl. Fix: generischer Hilfscontainer-Fallback in `dump_sqlite` — wenn sqlite3 im Ziel-Container fehlt, wird der Host-Pfad des Bind-Mounts per `docker inspect` ermittelt und ein Wegwerf-Container (`keinos/sqlite3`) liest die DB read-only und schreibt den konsistenten `.backup`-Snapshot direkt ins Backup-Ziel. Voraussetzung: DB liegt in einem Bind-Mount (bei vaultwarden: `/opt/docker/vaultwarden`), Named Volumes wuerden nicht aufgeloest (dokumentierte Grenze). Restore unveraendert.
+56. **Kollateralschaden `getcwd(): No such file`**: Ein Ctrl+C-Artefakt aus einem inzwischen geloeschten Startverzeichnis liess alle nachfolgenden rsyncs mit `getcwd(): No such file or directory` fehlschlagen — 20 der 24 FAILs im Lauf 2026-10-06_1554 waren Kollateral, nicht real. Empfehlung: backup.sh immer aus einem stabilen Verzeichnis starten (oder per cron/absolutem Pfad); ein `cd` in `backup.sh` als Haertung ist bewusst nicht eingebaut, weil cron das Problem nicht hat.
+
+## NAS-Mount-Regel (PR 9)
+
+57. **"Never back up things from /mnt"**: Alle Pfade unter `/mnt/` sind NAS-Mounts und vom NAS-eigenen Backup abgedeckt — ein zweites Backup auf dasselbe NAS wäre zirkulär und verschwendet Platz. Umgestellt: immich `db_only` (Bibliothek auf /mnt/immich bleibt unberührt), paperless nur DB + paperless-ai-Config (data/media auf NAS), opencloud nur lokale Config (Daten auf NAS). Zusätzlich Guard im Dispatcher: `FILE_PATHS` mit `/mnt/*` → FAIL mit klarer Meldung (Deklarationsfehler, kein Host-Zustand).
+58. **Restore-Reihenfolge bei NAS-Daten**: Nach DB-Restore zeigt der Container weiter auf den NAS-Pfad — Daten und DB müssen zum Zeitpunkt des NAS-eigenen Backups nicht synchron sein (RPO-Versatz möglich). Dokumentiert, akzeptiert.

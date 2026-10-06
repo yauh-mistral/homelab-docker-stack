@@ -88,9 +88,27 @@ dump_sqlite() {
       && docker exec "$DB_CONTAINER" rm -f /tmp/backup.sqlite; then
       log_ok "$SVC_NAME: sqlite .backup -> $out ($(du -h "$out" | cut -f1))"
     else
-      log_fail "$SVC_NAME: sqlite .backup fehlgeschlagen fuer $container_path"
+      # Fallback: Viele Images (z.B. vaultwarden) enthalten kein sqlite3-Binary.
+      # Dann das Verzeichnis der DB per Hilfscontainer mit sqlite3-Image sichern.
+      log_warn "$SVC_NAME: sqlite3 nicht im Container verfuegbar — nutze Hilfscontainer-Fallback"
+      # Host-Pfad des Bind-Mounts ermitteln, das das DB-Verzeichnis abbildet
+      local src_dir="$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "$(dirname "$container_path")"}}{{.Source}}{{end}}{{end}}' "$DB_CONTAINER")"
+      if [[ -n "$src_dir" && -d "$src_dir" ]]; then
+        # Ein Hilfscontainer mit sqlite3-Image: liest die DB (ro) und schreibt
+        # den konsistenten Snapshot direkt ins Zielverzeichnis (Online-Backup-API)
+        if docker run --rm -v "$src_dir:/db:ro" -v "$dest_dir:/out" keinos/sqlite3:latest \
+             sqlite3 "/db/$(basename "$container_path")" ".backup /out/$(basename "$host_path")" >>"$LOG_FILE" 2>&1 \
+          && [[ -s "$out" ]]; then
+          log_ok "$SVC_NAME: sqlite Fallback (Hilfscontainer) -> $out ($(du -h "$out" | cut -f1))"
+        else
+          log_fail "$SVC_NAME: sqlite .backup fehlgeschlagen fuer $container_path (auch Hilfscontainer-Fallback)"
+          rc=1
+        fi
+      else
+        log_fail "$SVC_NAME: sqlite .backup fehlgeschlagen fuer $container_path (kein Bind-Mount aufloesbar)"
+        rc=1
+      fi
       docker exec "$DB_CONTAINER" rm -f /tmp/backup.sqlite 2>/dev/null
-      rc=1
     fi
   done
   return $rc
