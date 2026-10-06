@@ -107,8 +107,14 @@ load_declaration() {
     log_fail "$SVC_NAME: SVC_CATEGORY fehlt in $file"
     return 1
   fi
-  # Platzhalter %STACKS_DIR% in ENV_FILE aufloesen (Quelle der Stacks ist konfigurierbar)
-  if [[ -n "${ENV_FILE:-}" && -n "${STACKS_DIR:-}" ]]; then
+  # Platzhalter %STACKS_DIR% in ENV_FILE und FILE_PATHS aufloesen
+  # (Quelle der Stacks ist konfigurierbar; Compose-Only-Deklarationen zeigen
+  # auf die compose.yaml im Stack-Verzeichnis statt auf Datenpfade)
+  if [[ -n "${STACKS_DIR:-}" ]]; then
+    local _i
+    for _i in "${!FILE_PATHS[@]}"; do
+      FILE_PATHS["$_i"]="${FILE_PATHS["$_i"]//%STACKS_DIR%/$STACKS_DIR}"
+    done
     ENV_FILE="${ENV_FILE//%STACKS_DIR%/$STACKS_DIR}"
   fi
   # Passwoerter aus Stack-.env nachladen (nur falls ENV_FILE gesetzt und lesbar)
