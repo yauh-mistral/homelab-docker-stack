@@ -13,9 +13,11 @@ fi
 dump_postgres() {
   local dest_dir="$1"
   local out="$dest_dir/${SVC_NAME}.sql.gz"
+  # DB_DUMP_ALL=true -> pg_dumpall (kompletter Cluster inkl. globaler Objekte).
+  # WICHTIG: pg_dump kennt KEIN --all — die Option gehoert zu pg_dumpall.
   local -a cmd=(docker exec "$DB_CONTAINER" pg_dump -U "$DB_USER")
   if [[ "${DB_DUMP_ALL:-false}" == "true" ]]; then
-    cmd+=(--all)
+    cmd=(docker exec "$DB_CONTAINER" pg_dumpall -U "$DB_USER")
   else
     cmd+=(--dbname "$DB_NAME")
   fi

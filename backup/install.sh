@@ -79,6 +79,7 @@ if [[ -f "$CONF_FILE" ]]; then
   grep -q "^STACKS_DIR=" "$CONF_FILE" || missing+=("STACKS_DIR=$STACKS_DIR")
   grep -q "^BACKUP_ROOT=" "$CONF_FILE" || missing+=("BACKUP_ROOT=$BACKUP_ROOT")
   grep -q "^SERVICES_DIR=" "$CONF_FILE" || missing+=("SERVICES_DIR=$INSTALL_HOME/services.d")
+  grep -q "^KEEP_VERSIONS=" "$CONF_FILE" || missing+=("KEEP_VERSIONS=14")
   if [[ ${#missing[@]} -gt 0 ]]; then
     printf '%s\n' "${missing[@]}" >> "$CONF_FILE"
     echo "Ergaenzt: ${missing[*]}"
@@ -95,6 +96,8 @@ SERVICES_DIR=$INSTALL_HOME/services.d
 # Optional: Restic (erst aktivieren, wenn restic installiert + Passwortdatei existiert)
 USE_RESTIC=false
 # RESTIC_PASSWORD_FILE=/etc/restic-password
+# Anzahl behaltener Versionen (rsnapshot-Rotation v.0..v.KEEP_VERSIONS-1)
+KEEP_VERSIONS=14
 EOF
   chmod 600 "$CONF_FILE"
   echo "Erzeugt: $CONF_FILE"
