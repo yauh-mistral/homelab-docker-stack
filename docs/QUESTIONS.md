@@ -89,3 +89,7 @@ Jede getroffene Annahme ist hier mit Begründung aufgelistet. Nicht schließen �
 50. **Monatsfirste entfallen**: Die alte Monatsfirst-Behaltelogik (12 monthly) ist in der Versionen-Rotation nicht abgebildet — KEEP_VERSIONS zählt Versionen (Läufe), nicht Kalendermonate. Bei täglichem Cron = KEEP_VERSIONS Tage Historie; für längere Historie KEEP_VERSIONS hochsetzen oder wöchentlich rotierende weekly.N nachrüsten (noch nicht gebaut).
 51. **Timestamps in Logs**: Jede stdout-/Log-Zeile bekommt `YYYY-MM-DD HH:MM:SS`-Präfix (vorher nur im Log-Dateinamen) — Dauer einzelner Schritte im Lauf direkt ablesbar.
 52. **Consistency-Check am Laufende**: prüft pro verarbeitetem Service, dass v.0 existiert, nicht leer ist und DB-Stände mind. einen Dump >0 Bytes haben. WARNs, kein FAIL — Grund: Ein fehlender Stand ist oft ein bekannter Host-Zustand (nicht deployt), der Check ist Frühindikator, kein Alarm-Mechanismus.
+
+## Korrektur Immich-DB-Dump (PR 8)
+
+53. **`DB_DUMP_ALL` rief ungültiges `pg_dump --all` auf**: `--all` existiert nur bei `pg_dumpall`, nicht bei `pg_dump` — der Immich-Dump scheiterte mit `unrecognized option`. Fix: `DB_DUMP_ALL=true` nutzt jetzt `pg_dumpall -U postgres` (kompletter Cluster inkl. Rollen/Rechte, wie es die Immich-Doku für Migrationen empfiehlt); alle anderen Postgres-Services weiter mit `pg_dump --dbname`. Der Fehler wäre im echten Lauf als FAIL sichtbar geworden — der Consistency-Check aus diesem PR hätte ihn zusätzlich über den leeren/fehlenden Dump-Stand angezeigt.
