@@ -281,7 +281,11 @@ rsync_backup() {
     [[ -z "$e" ]] && continue
     excludes+=(--exclude "$e")
   done
-  local -a opts=(-a --delete-excluded --numeric-ids --mkpath)
+  # NAS-Shares erlauben i.d.R. kein chown durch den Host (root_squash/CIFS) —
+  # ohne --no-owner/--no-group liefert rsync trotz vollstaendigem Transfer
+  # Exit-Code 23 (chown: Operation not permitted). Ownership kann auf dem
+  # Ziel ohnehin nicht gespeichert werden; Rechte/Zeiten bleiben erhalten.
+  local -a opts=(-a --no-owner --no-group --delete-excluded --numeric-ids --mkpath)
   if [[ "$DRY_RUN" == "true" ]]; then
     opts+=(-n --stats)
   else
