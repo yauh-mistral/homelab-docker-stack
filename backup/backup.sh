@@ -127,6 +127,13 @@ validate_declaration() {
   local p any_path_exists=false
   for p in "${FILE_PATHS[@]:-}"; do
     [[ -z "$p" ]] && continue
+    # NAS-Mounts sind nie Backup-Quellen: Das NAS hat sein eigenes Backup.
+    # Pfad-Regel schuetzt vor versehentlicher Aufnahme in Deklarationen.
+    if [[ "$p" == /mnt/* ]]; then
+      log_fail "$SVC_NAME: NAS-Pfad als Backup-Quelle verboten: $p (das NAS hat sein eigenes Backup — Deklaration korrigieren)"
+      problems=1
+      continue
+    fi
     if [[ ! -e "$p" ]]; then
       log_warn "$SVC_NAME: Quellpfad existiert nicht auf diesem Host: $p"
       WARTENDE_LUECKEN+=("Quellpfad fehlt: $p ($SVC_NAME)")
