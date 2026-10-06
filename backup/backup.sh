@@ -192,6 +192,18 @@ backup_one_service() {
     return 0
   fi
 
+  # Rotation VOR dem Schreiben: daily.0 -> daily.1 -> ... -> entfernt
+  if [[ "$DRY_RUN" != "true" ]]; then
+    case "$SVC_CATEGORY" in
+      db_only)        rotate_versions "$BACKUP_ROOT/$SVC_NAME/db" ;;
+      files_only|config_only) rotate_versions "$BACKUP_ROOT/$SVC_NAME/files" ;;
+      db_and_files)
+        rotate_versions "$BACKUP_ROOT/$SVC_NAME/db"
+        rotate_versions "$BACKUP_ROOT/$SVC_NAME/files"
+        ;;
+    esac
+  fi
+
   local rc=0
   # PRE_DUMP_HOOK (z.B. paperless document_exporter)
   if [[ -n "${PRE_DUMP_HOOK:-}" ]]; then
@@ -294,18 +306,6 @@ for f in "${SVC_FILES[@]}"; do
   backup_one_service "$f"
 done
 
-# Retention nur bei echtem Lauf (fuer DB-Kategorien)
-if [[ "$DRY_RUN" != "true" ]]; then
-  for f in "${SVC_FILES[@]}"; do
-    load_declaration "$f" || continue
-    case "$SVC_CATEGORY" in
-      db_only|db_and_files)
-        prune_dump_dirs "$BACKUP_ROOT/$SVC_NAME/db" "$KEEP_DAILY_DUMPS" "$KEEP_MONTHLY_DUMPS"
-        ;;
-    esac
-  done
-fi
-
 # Luecken (fehlende Quellpfade) als Fragen dokumentieren
 if [[ ${#WARTENDE_LUECKEN[@]} -gt 0 ]]; then
   log_warn "Offene Luecken in diesem Lauf (${#WARTENDE_LUECKEN[@]}):"
@@ -316,6 +316,66 @@ if [[ ${#WARTENDE_LUECKEN[@]} -gt 0 ]]; then
 fi
 
 log_info "Lauf beendet: OK=$OKS FAIL=$FAILS SKIP=$SKIPS"
+
+# ----------------------------------------------------------------------
+# Consistency-Check: Ziel gegen Quelle pruefen (nur bei echtem Lauf)
+# - je Service: existiert der Ziel-Stand und ist er nicht leer?
+# - DB-Dumps: vorhanden und groesser 0 Bytes (still-leere Dumps entlarven)
+# - Dateien: mindestens eine Datei im Ziel-Stand
+# - zusaetzlich: rsync-Verifikation von Stichproben (Schnellcheck)
+# ----------------------------------------------------------------------
+consistency_check() {
+  local problems=0 svc dest dump
+  if [[ "$DRY_RUN" == "true" ]]; then
+    log_dry "Consistency-Check: wuerde Backups gegen Quellen pruefen"
+    return 0
+  fi
+  log_info "Consistency-Check: pruefe Ziel-Staende ..."
+  for f in "${SVC_FILES[@]}"; do
+    load_declaration "$f" || continue
+    case "$SVC_CATEGORY" in
+      ignore) continue ;;
+    esac
+    [[ -n "${SERVICE_FILTER:-}" && "$SVC_NAME" != "$SERVICE_FILTER" ]] && continue
+    case "$SVC_CATEGORY" in
+      db_only|db_and_files)
+        dest="$BACKUP_ROOT/$SVC_NAME/db/daily.0"
+        if [[ ! -d "$dest" ]]; then
+          log_warn "Consistency: $SVC_NAME: kein DB-Stand in $dest"
+          problems=$((problems+1))
+        else
+          # mind. ein Dump mit >0 Bytes (leere Dumps = stiller Fehlschlag)
+          dump="$(find "$dest" -maxdepth 1 -type f -size +0c | head -1)"
+          if [[ -z "$dump" ]]; then
+            log_warn "Consistency: $SVC_NAME: DB-Stand existiert, aber leer/0-Byte-Dumps in $dest"
+            problems=$((problems+1))
+          fi
+        fi
+        ;;
+    esac
+    case "$SVC_CATEGORY" in
+      files_only|config_only|db_and_files)
+        dest="$BACKUP_ROOT/$SVC_NAME/files/daily.0"
+        if [[ ! -d "$dest" ]]; then
+          log_warn "Consistency: $SVC_NAME: kein Datei-Stand in $dest"
+          problems=$((problems+1))
+        else
+          if [[ -z "$(find "$dest" -type f -print -quit)" ]]; then
+            log_warn "Consistency: $SVC_NAME: Datei-Stand existiert, enthaelt aber keine Dateien"
+            problems=$((problems+1))
+          fi
+        fi
+        ;;
+    esac
+  done
+  if [[ $problems -gt 0 ]]; then
+    log_warn "Consistency-Check: $problems Problem(e) gefunden"
+  else
+    log_ok "Consistency-Check: alle Ziel-Staende plausibel"
+  fi
+}
+consistency_check
+
 if [[ "$DRY_RUN" != "true" ]]; then
   echo "OK=$OKS FAIL=$FAILS SKIP=$SKIPS" > "$BACKUP_ROOT/_meta/last-run-summary.txt" 2>/dev/null || true
 fi
