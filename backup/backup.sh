@@ -64,6 +64,15 @@ log_init
 _acquire_lock
 log_info "Dispatcher start: ${#SVC_FILES[@]} Deklarationen, dry-run=$DRY_RUN, Ziel=$BACKUP_ROOT"
 
+# Preflight: Ohne Docker-Daemon wuerden alle Container-Checks falsch-negativ
+# sein — lieber hart abbrechen als viele SKIPs als Erfolg zu verkaufen.
+if [[ "$DRY_RUN" != "true" ]]; then
+  if ! docker_available; then
+    log_fail "Abbruch: Docker-Daemon nicht erreichbar (docker info fehlgeschlagen)"
+    exit 1
+  fi
+fi
+
 # Mount-Guard: NAS-Ziel muss ein echter Mount sein, sonst schreibt das Backup
 # stillschweigend auf die lokale Platte (Katastrofall: Platte voll + falsches Ziel).
 if [[ "$DRY_RUN" != "true" ]]; then
@@ -84,11 +93,25 @@ WARTENDE_LUECKEN=()
 
 validate_declaration() {
   local problems=0
+  SVC_DB_OK=true
+  SVC_FILES_OK=true
   # DB-Kategorie braucht DB_TYPE und DB_CONTAINER
   case "$SVC_CATEGORY" in
     db_only|db_and_files)
       if [[ -z "${DB_TYPE:-}" || -z "${DB_CONTAINER:-}" ]]; then
         log_fail "$SVC_NAME: DB-Kategorie, aber DB_TYPE/DB_CONTAINER fehlt"; problems=1
+      else
+        # Preflight: Existiert der DB-Container ueberhaupt? Fehlt er komplett,
+        # ist der Service vermutlich nicht deployt -> SKIP statt FAIL.
+        if ! container_exists "$DB_CONTAINER"; then
+          log_warn "$SVC_NAME: DB-Container '$DB_CONTAINER' existiert nicht auf diesem Host"
+          WARTENDE_LUECKEN+=("DB-Container fehlt: $DB_CONTAINER ($SVC_NAME)")
+          SVC_DB_OK=false
+        elif ! container_running "$DB_CONTAINER"; then
+          log_warn "$SVC_NAME: DB-Container '$DB_CONTAINER' existiert, laeuft aber nicht"
+          WARTENDE_LUECKEN+=("DB-Container laeuft nicht: $DB_CONTAINER ($SVC_NAME)")
+          SVC_DB_OK=false
+        fi
       fi
       ;;
   esac
@@ -101,14 +124,21 @@ validate_declaration() {
       ;;
   esac
   # Quellpfade pruefen (Warnung, kein Abbruch: Luecke dokumentieren)
-  local p
+  local p any_path_exists=false
   for p in "${FILE_PATHS[@]:-}"; do
     [[ -z "$p" ]] && continue
     if [[ ! -e "$p" ]]; then
       log_warn "$SVC_NAME: Quellpfad existiert nicht auf diesem Host: $p"
       WARTENDE_LUECKEN+=("Quellpfad fehlt: $p ($SVC_NAME)")
+    else
+      any_path_exists=true
     fi
   done
+  [[ "$any_path_exists" == "true" ]] || SVC_FILES_OK=false
+  # SQLite-Dateien gelten als vorhandene Quelle, wenn der Container existiert
+  if [[ ${#SQLITE_FILES[@]} -gt 0 && "$SVC_DB_OK" == "true" ]]; then
+    SVC_FILES_OK=true
+  fi
   return $problems
 }
 
@@ -144,6 +174,24 @@ backup_one_service() {
     return 1
   fi
 
+  # Preflight-Ergebnis: Fehlt die Quelle komplett (Container nicht vorhanden,
+  # keine existierenden Pfade), ist der Service auf diesem Host offenbar nicht
+  # deployt -> sauberer SKIP statt FAIL. Ein Teil fehlt -> Teil-Backup + WARN.
+  local skip_db=false skip_files=false
+  case "$SVC_CATEGORY" in
+    db_only)        [[ "$SVC_DB_OK" == "false" ]] && skip_db=true ;;
+    files_only|config_only) [[ "$SVC_FILES_OK" == "false" ]] && skip_files=true ;;
+    db_and_files)
+      [[ "$SVC_DB_OK" == "false" ]] && skip_db=true
+      [[ "$SVC_FILES_OK" == "false" ]] && skip_files=true
+      ;;
+  esac
+  if [[ "$skip_db" == "true" && "$skip_files" == "true" ]]; then
+    ((SKIPS+=1))
+    log_info "$SVC_NAME: SKIP — Quelle fehlt komplett (Service nicht deployt oder Pfade/Container stimmen nicht)"
+    return 0
+  fi
+
   local rc=0
   # PRE_DUMP_HOOK (z.B. paperless document_exporter)
   if [[ -n "${PRE_DUMP_HOOK:-}" ]]; then
@@ -160,7 +208,11 @@ backup_one_service() {
   # 1) DB-Dump (immer zuerst — Immich-Reihenfolge: DB vor Dateien)
   case "$SVC_CATEGORY" in
     db_only|db_and_files)
-      if ! dump_database "$(svc_db_dir "$SVC_NAME")"; then ((rc+=1)); fi
+      if [[ "$skip_db" == "true" ]]; then
+        log_warn "$SVC_NAME: DB-Backup uebersprungen (Container fehlt/laeuft nicht) — Teil-Backup"
+      else
+        if ! dump_database "$(svc_db_dir "$SVC_NAME")"; then ((rc+=1)); fi
+      fi
       ;;
   esac
 
@@ -179,6 +231,9 @@ backup_one_service() {
   # 2) Dateien (mit optionalem Stop-Fenster)
   case "$SVC_CATEGORY" in
     files_only|db_and_files|config_only)
+      if [[ "$skip_files" == "true" ]]; then
+        log_warn "$SVC_NAME: Datei-Backup uebersprungen (keine Quelldateien vorhanden) — Teil-Backup"
+      else
       local do_stop=false
       if [[ ${#STOP_CONTAINERS[@]} -gt 0 ]]; then do_stop=true; fi
       if [[ "$do_stop" == "true" ]]; then
@@ -191,6 +246,7 @@ backup_one_service() {
         fi
       else
         if ! backup_files_for_service; then ((rc+=1)); fi
+      fi
       fi
       ;;
   esac

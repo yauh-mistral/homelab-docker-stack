@@ -94,6 +94,16 @@ sudo grep FAIL /mnt/systems/backups/ovi/_meta/runs/<neuester-stamp>.log
 ```
 Einzelfehler isolieren andere Services nicht (Fehler-Isolation pro Deklaration). Stop-Fenster-Services (arr-Stack, Home Assistant, Mealie, Kuma …) sind kurz down — nachts cron-fähig.
 
+**SKIP-Semantik (Preflight):** Vor jedem Backup prüft der Dispatcher, ob die Quelle existiert (DB-Container via `docker inspect`, Dateipfade via Dateisystem). Ergebnis:
+
+- Quelle komplett vorhanden → normales Backup.
+- DB-Container fehlt/läuft nicht, aber Dateien vorhanden (oder umgekehrt) → **Teil-Backup** mit `WARN`, kein FAIL.
+- Quelle fehlt komplett (Service nicht deployt, Container unbekannt, Pfade falsch) → **SKIP** mit `INFO`, kein FAIL. Der Lauf bleibt grün.
+- Falsch deklarierte Services (DB-Kategorie ohne `DB_TYPE`, leere `FILE_PATHS`) bleiben FAIL — das ist ein Deklarationsfehler, kein Host-Zustand.
+- Docker-Daemon nicht erreichbar (echter Lauf) → harter Abbruch statt 43 SKIPs.
+
+`SKIP` bedeutet damit zweierlei: per Deklaration `ignore` ODER „Quelle auf diesem Host nicht vorhanden“. Die Lücken-Liste am Ende des Laufs (`WARN - DB-Container fehlt: …`) zeigt genau, welche Services nicht deployt sind — Auslieferung auf ovi ohne FAIL-Alarm möglich.
+
 ## Schritt 7: Restore-Test
 
 ```bash
