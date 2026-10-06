@@ -12,8 +12,8 @@ set -o pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 INSTALL_HOME="/opt/docker/backup"
-STACKS_DIR=""
-BACKUP_ROOT="/mnt/systems/backups/ovi"
+STACKS_DIR="/opt/docker/arcane/projects"
+BACKUP_ROOT="/mnt/systems/ovi/backup"
 CONF_FILE="/etc/backup.conf"
 
 while [[ $# -gt 0 ]]; do
