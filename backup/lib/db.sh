@@ -119,14 +119,19 @@ dump_forgejo() {
   local dest_dir="$1"
   local out="$dest_dir/${SVC_NAME}-dump.zip"
   if [[ "$DRY_RUN" == "true" ]]; then
-    log_dry "$SVC_NAME: wuerde ausfuehren: docker exec --user git $DB_CONTAINER forgejo dump --type zip --file /tmp/forgejo-dump.zip -> $out"
+    log_dry "$SVC_NAME: wuerde ausfuehren: docker exec --user git $DB_CONTAINER forgejo dump --skip-repository [${DB_DUMP_EXTRA:-}] -> $out"
     return 0
   fi
   container_running "$DB_CONTAINER" || { log_fail "$SVC_NAME: Forgejo-Container laeuft nicht"; return 1; }
   mkdir -p "$dest_dir"
   local binary
   if docker exec "$DB_CONTAINER" sh -c 'command -v forgejo >/dev/null 2>&1'; then binary=forgejo; else binary=gitea; fi
-  if docker exec --user git "$DB_CONTAINER" "$binary" dump --tempdir /tmp --type zip --file /tmp/forgejo-dump.zip 2>>"$LOG_FILE" \
+  # --skip-repository: Repos werden per rsync gesichert (FILE_PATHS) — sonst
+  # waere der Dump (~15G inkl. Mirrors) eine Doppelung. DB_DUMP_EXTRA kann die
+  # Option fuer Einzelfaelle ueberschreiben (z.B. voller Dump gewuenscht).
+  local -a skip_repo=(--skip-repository)
+  if [[ "${DB_DUMP_EXTRA:-}" == *full* ]]; then skip_repo=(); fi
+  if docker exec --user git "$DB_CONTAINER" "$binary" dump "${skip_repo[@]}" --tempdir /tmp --type zip --file /tmp/forgejo-dump.zip 2>>"$LOG_FILE" \
     && docker cp "$DB_CONTAINER:/tmp/forgejo-dump.zip" "$out" >/dev/null 2>>"$LOG_FILE" \
     && docker exec "$DB_CONTAINER" rm -f /tmp/forgejo-dump.zip; then
     log_ok "$SVC_NAME: $binary dump -> $out ($(du -h "$out" | cut -f1))"
