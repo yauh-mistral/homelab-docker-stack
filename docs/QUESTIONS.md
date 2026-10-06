@@ -93,3 +93,7 @@ Jede getroffene Annahme ist hier mit Begründung aufgelistet. Nicht schließen �
 ## Korrektur Immich-DB-Dump (PR 8)
 
 53. **`DB_DUMP_ALL` rief ungültiges `pg_dump --all` auf**: `--all` existiert nur bei `pg_dumpall`, nicht bei `pg_dump` — der Immich-Dump scheiterte mit `unrecognized option`. Fix: `DB_DUMP_ALL=true` nutzt jetzt `pg_dumpall -U postgres` (kompletter Cluster inkl. Rollen/Rechte, wie es die Immich-Doku für Migrationen empfiehlt); alle anderen Postgres-Services weiter mit `pg_dump --dbname`. Der Fehler wäre im echten Lauf als FAIL sichtbar geworden — der Consistency-Check aus diesem PR hätte ihn zusätzlich über den leeren/fehlenden Dump-Stand angezeigt.
+
+## Korrektur Ghost-DB-Dump (PR 8)
+
+54. **ghost: `FLUSH TABLES` verweigert (MySQL-Fehler 1227)**: `mysqldump --single-transaction --routines --triggers` führt initial `FLUSH /*!40101 LOCAL */ TABLES` aus; dafür braucht `ghost_user` das `RELOAD`- bzw. `FLUSH_TABLES`-Privileg, das ihm fehlt. Fix ohne Rechteänderung am DB-User: `--skip-lock-tables` in `DB_DUMP_EXTRA` — die Kombination `--single-transaction --skip-lock-tables` ist für InnoDB ohnehin die empfohlene konsistente Snapshot-Konfiguration. Alternative wäre `GRANT RELOAD ON *.* TO ghost_user` gewesen; bewusst nicht gewählt, um DB-Rechte nicht für Backup-Zwecke aufzuweichen.
