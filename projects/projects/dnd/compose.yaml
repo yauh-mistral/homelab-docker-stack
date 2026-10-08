@@ -1,0 +1,19 @@
+version: "3"
+services:
+  5etools:
+    container_name: 5etools
+    image: jafner/5etools-docker
+    volumes:
+      - /opt/docker/5etools:/usr/local/apache2/htdocs
+    networks:
+      - shared_proxy
+    restart: unless-stopped
+    environment:
+     #- IMG=TRUE # Set to TRUE to pull images from https://github.com/5etools-mirror-2/5etools-img (as a Git submodule)
+     - OFFLINE_MODE=TRUE # Optional. Expects "TRUE" or "FALSE". Disables checking for new updates.
+     - TZ=${TZ}
+     - VIRTUAL_HOST=5etools.islanublar.de
+
+networks:
+  shared_proxy:
+    external: true
