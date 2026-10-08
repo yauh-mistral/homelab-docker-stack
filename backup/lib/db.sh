@@ -107,7 +107,7 @@ dump_sqlite() {
         # Ein Hilfscontainer mit sqlite3-Image: liest die DB (ro) und schreibt
         # den konsistenten Snapshot direkt ins Zielverzeichnis (Online-Backup-API)
         if docker run --rm -v "$src_dir:/db:ro" -v "$dest_dir:/out" keinos/sqlite3:latest \
-             sqlite3 "/db/$(basename "$container_path")" ".backup /out/$(basename "$host_path")" >>"$LOG_FILE" 2>&1 \
+             sqlite3 "/db/$(basename "$container_path")" ".backup /out/$(basename "$out")" >>"$LOG_FILE" 2>&1 \
           && [[ -s "$out" ]]; then
           log_ok "$SVC_NAME: sqlite Fallback (Hilfscontainer) -> $out ($(du -h "$out" | cut -f1))"
         else
