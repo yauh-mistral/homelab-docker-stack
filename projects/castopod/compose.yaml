@@ -43,7 +43,7 @@ services:
       CP_PHP_MEMORY_LIMIT: ${CP_PHP_MEMORY_LIMIT}
       CP_UPLOAD_MAX_FILESIZE: ${CP_UPLOAD_MAX_FILESIZE}
       CP_POST_MAX_SIZE: ${CP_POST_MAX_SIZE}
-      VIRTUAL_HOST: ${CASTOPOD_ADDITIONAL_DOMAINS}
+      VIRTUAL_HOST: ${CASTOPOD_AVAILABLE_DOMAINS}
       VIRTUAL_PORT: ${CP_VIRTUAL_PORT}
     volumes:
       - /opt/docker/castopod/app/media:/app/public/media
