@@ -45,8 +45,9 @@ svc_mount_dest_for() {
 }
 
 path_is_ignored() {
-  # True wenn Pfad unter einem ignorierten Praefix liegt (NAS, tmp, ...)
+  # True wenn Pfad unter einem ignorierten Praefix liegt (NAS, tmp, OS-Runtime)
   local p="${1:?Pfad fehlt}" pre
+  [[ "$p" == "/" ]] && return 0
   for pre in "${IGNORE_PATH_PREFIXES[@]:-}"; do
     [[ -z "$pre" ]] && continue
     [[ "$p" == "$pre"* ]] && return 0
