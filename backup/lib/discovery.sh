@@ -59,7 +59,7 @@ apply_policy() {
   local f
   # Reihenfolge: policy.conf (Defaults) ist bereits gesourced;
   # zuerst Projekt-Policy, dann Container-Policy (gewinnt).
-  for f in "$POLICY_DIR/${SVC_PROJECT:-}.env" "$POLICY_DIR/${SVC_NAME}.env"; do
+  for f in "$POLICY_DIR/${SVC_PROJECT:-}.project.env" "$POLICY_DIR/${SVC_NAME}.env"; do
     [[ -f "$f" ]] || continue
     # shellcheck disable=SC1090
     source "$f"
