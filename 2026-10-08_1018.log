@@ -1,0 +1,205 @@
+=== Backup-Lauf 2026-10-08_1018 (host: ovi) ===
+[2026-10-08 10:18:39] [INFO] Dispatcher start: 43 Deklarationen, dry-run=false, Ziel=/mnt/systems/ovi/backups
+[2026-10-08 10:18:40] [OK] analytics: pg_dump -> /mnt/systems/ovi/backups/analytics/db/v.0/analytics.sql.gz (572K)
+[2026-10-08 10:18:40] [OK] analytics: rsync /opt/docker/shynet/data -> /mnt/systems/ovi/backups/analytics/files/v.0/data
+[2026-10-08 10:18:40] [OK] analytics: Backup abgeschlossen
+[2026-10-08 10:18:40] [INFO] audiobookshelf: Container 'audiobookshelf' gestoppt (Stop-Fenster)
+[2026-10-08 10:18:42] [OK] audiobookshelf: rsync /opt/docker/audiobookshelf/config -> /mnt/systems/ovi/backups/audiobookshelf/files/v.0/config
+[2026-10-08 10:18:43] [INFO] audiobookshelf: Container 'audiobookshelf' wieder gestartet
+[2026-10-08 10:18:43] [OK] audiobookshelf: Backup abgeschlossen
+[2026-10-08 10:18:46] [INFO] bazarr: Container 'bazarr' gestoppt (Stop-Fenster)
+[2026-10-08 10:18:46] [OK] bazarr: rsync /opt/docker/bazarr -> /mnt/systems/ovi/backups/bazarr/files/v.0/bazarr
+[2026-10-08 10:18:47] [INFO] bazarr: Container 'bazarr' wieder gestartet
+[2026-10-08 10:18:47] [OK] bazarr: Backup abgeschlossen
+[2026-10-08 10:18:51] [INFO] calibre-web: Container 'calibre-web' gestoppt (Stop-Fenster)
+[2026-10-08 10:18:51] [OK] calibre-web: rsync /opt/docker/calibre-web -> /mnt/systems/ovi/backups/calibre-web/files/v.0/calibre-web
+[2026-10-08 10:18:51] [INFO] calibre-web: Container 'calibre-web' wieder gestartet
+[2026-10-08 10:18:51] [OK] calibre-web: Backup abgeschlossen
+[2026-10-08 10:18:52] [OK] castopod: mariadb-dump -> /mnt/systems/ovi/backups/castopod/db/v.0/castopod.sql.gz (128K)
+[2026-10-08 10:19:07] [OK] castopod: rsync /opt/docker/castopod/app/media -> /mnt/systems/ovi/backups/castopod/files/v.0/media
+[2026-10-08 10:19:07] [OK] castopod: Backup abgeschlossen
+[2026-10-08 10:19:07] [OK] codex: rsync /opt/docker/codex/config -> /mnt/systems/ovi/backups/codex/files/v.0/config
+[2026-10-08 10:19:07] [OK] codex: Backup abgeschlossen
+[2026-10-08 10:19:07] [OK] dnd: rsync /opt/docker/arcane/projects/dnd/compose.yaml -> /mnt/systems/ovi/backups/dnd/files/v.0/compose.yaml
+[2026-10-08 10:19:07] [OK] dnd: Backup abgeschlossen
+[2026-10-08 10:19:07] [WARN] docker-gui: Quellpfad existiert nicht auf diesem Host: /opt/docker/portainer
+[2026-10-08 10:19:07] [WARN] docker-gui: Quellpfad existiert nicht auf diesem Host: /opt/docker/dockge/data
+[2026-10-08 10:19:07] [WARN] docker-gui: Quellpfad existiert nicht auf diesem Host: /opt/docker/stacks
+[2026-10-08 10:19:07] [WARN] docker-gui: Datei-Backup uebersprungen (keine Quelldateien vorhanden) — Teil-Backup
+[2026-10-08 10:19:07] [OK] docker-gui: Backup abgeschlossen
+2026/10/08 10:19:08 ...s/storage/storage.go:157:initAttachments() [I] Initialising Attachment storage with type: local
+2026/10/08 10:19:08 ...les/storage/local.go:33:NewLocalStorage() [I] Creating new Local Storage at /data/gitea/attachments
+2026/10/08 10:19:08 ...s/storage/storage.go:147:initAvatars() [I] Initialising Avatar storage with type: local
+2026/10/08 10:19:08 ...les/storage/local.go:33:NewLocalStorage() [I] Creating new Local Storage at /data/gitea/avatars
+2026/10/08 10:19:08 ...s/storage/storage.go:174:initRepoAvatars() [I] Initialising Repository Avatar storage with type: local
+2026/10/08 10:19:08 ...les/storage/local.go:33:NewLocalStorage() [I] Creating new Local Storage at /data/gitea/repo-avatars
+2026/10/08 10:19:08 ...s/storage/storage.go:168:initLFS() [I] Initialising LFS storage with type: local
+2026/10/08 10:19:08 ...les/storage/local.go:33:NewLocalStorage() [I] Creating new Local Storage at /data/git/lfs
+2026/10/08 10:19:08 ...s/storage/storage.go:180:initRepoArchives() [I] Initialising Repository Archive storage with type: local
+2026/10/08 10:19:08 ...les/storage/local.go:33:NewLocalStorage() [I] Creating new Local Storage at /data/gitea/repo-archive
+2026/10/08 10:19:08 ...s/storage/storage.go:190:initPackages() [I] Initialising Packages storage with type: local
+2026/10/08 10:19:08 ...les/storage/local.go:33:NewLocalStorage() [I] Creating new Local Storage at /data/gitea/packages
+2026/10/08 10:19:08 ...s/storage/storage.go:201:initActions() [I] Initialising Actions storage with type: local
+2026/10/08 10:19:08 ...les/storage/local.go:33:NewLocalStorage() [I] Creating new Local Storage at /data/gitea/actions_log
+2026/10/08 10:19:08 ...s/storage/storage.go:205:initActions() [I] Initialising ActionsArtifacts storage with type: local
+2026/10/08 10:19:08 ...les/storage/local.go:33:NewLocalStorage() [I] Creating new Local Storage at /data/gitea/actions_artifacts
+2026/10/08 10:19:08 cmd/dump.go:324:runDump() [I] Skipping local repositories
+2026/10/08 10:19:08 cmd/dump.go:355:runDump() [I] Packing data directory.../data/gitea
+2026/10/08 10:19:08 cmd/dump.go:336:func1() [I] Adding custom configuration file from /data/gitea/conf/app.ini
+2026/10/08 10:19:08 cmd/dump.go:476:dumpCustom() [I] Custom dir /data/gitea is inside data dir /data/gitea, skipping
+2026/10/08 10:19:08 cmd/dump.go:520:dumpDatabase() [I] Dumping database...
+2026/10/08 10:19:20 cmd/dump.go:424:runDump() [I] Finished dumping in file /tmp/forgejo-dump.zip
+[2026-10-08 10:19:21] [OK] forgejo: forgejo dump -> /mnt/systems/ovi/backups/forgejo/db/v.0/forgejo-dump.zip (12M)
+[2026-10-08 10:21:03] [OK] forgejo: rsync /opt/docker/forgejo/data -> /mnt/systems/ovi/backups/forgejo/files/v.0/data
+[2026-10-08 10:21:53] [OK] forgejo: rsync /opt/docker/forgejo/runner -> /mnt/systems/ovi/backups/forgejo/files/v.0/runner
+[2026-10-08 10:21:53] [OK] forgejo: Backup abgeschlossen
+mysqldump: Couldn't execute 'FLUSH /*!40101 LOCAL */ TABLES': Access denied; you need (at least one of) the RELOAD or FLUSH_TABLES privilege(s) for this operation (1227)
+[2026-10-08 10:21:53] [FAIL] ghost: mysqldump fehlgeschlagen oder leer
+[2026-10-08 10:21:58] [OK] ghost: rsync /opt/docker/ghost/ghost -> /mnt/systems/ovi/backups/ghost/files/v.0/ghost
+[2026-10-08 10:22:00] [INFO] hardening: Container 'crowdsec' gestoppt (Stop-Fenster)
+[2026-10-08 10:22:00] [OK] hardening: rsync /opt/docker/crowdsec/config -> /mnt/systems/ovi/backups/hardening/files/v.0/config
+[2026-10-08 10:22:00] [OK] hardening: rsync /opt/docker/crowdsec/data -> /mnt/systems/ovi/backups/hardening/files/v.0/data
+[2026-10-08 10:22:01] [INFO] hardening: Container 'crowdsec' wieder gestartet
+[2026-10-08 10:22:01] [OK] hardening: Backup abgeschlossen
+[2026-10-08 10:22:09] [INFO] homeassistant: Container 'homeassistant' gestoppt (Stop-Fenster)
+[2026-10-08 10:22:23] [OK] homeassistant: rsync /opt/docker/homeassistant -> /mnt/systems/ovi/backups/homeassistant/files/v.0/homeassistant
+[2026-10-08 10:22:23] [INFO] homeassistant: Container 'homeassistant' wieder gestartet
+[2026-10-08 10:22:23] [OK] homeassistant: Backup abgeschlossen
+[2026-10-08 10:22:23] [OK] homepage: rsync /opt/docker/homepage -> /mnt/systems/ovi/backups/homepage/files/v.0/homepage
+[2026-10-08 10:22:23] [OK] homepage: Backup abgeschlossen
+[2026-10-08 10:23:18] [OK] immich: pg_dump -> /mnt/systems/ovi/backups/immich/db/v.0/immich.sql.gz (325M)
+[2026-10-08 10:23:18] [OK] immich: Backup abgeschlossen
+[2026-10-08 10:23:22] [INFO] lidarr: Container 'lidarr' gestoppt (Stop-Fenster)
+[2026-10-08 10:23:36] [OK] lidarr: rsync /opt/docker/lidarr -> /mnt/systems/ovi/backups/lidarr/files/v.0/lidarr
+[2026-10-08 10:23:36] [INFO] lidarr: Container 'lidarr' wieder gestartet
+[2026-10-08 10:23:36] [OK] lidarr: Backup abgeschlossen
+[2026-10-08 10:23:36] [WARN] litellm: DB-Container 'litellm_db' existiert nicht auf diesem Host
+[2026-10-08 10:23:36] [WARN] litellm: DB-Backup uebersprungen (Container fehlt/laeuft nicht) — Teil-Backup
+[2026-10-08 10:23:36] [OK] litellm: rsync /opt/docker/litellm/config.yaml -> /mnt/systems/ovi/backups/litellm/files/v.0/config.yaml
+[2026-10-08 10:23:36] [OK] litellm: Backup abgeschlossen
+[2026-10-08 10:23:37] [INFO] matter-server: Container 'matter-server' gestoppt (Stop-Fenster)
+[2026-10-08 10:23:37] [OK] matter-server: rsync /opt/docker/python-matter-server/data -> /mnt/systems/ovi/backups/matter-server/files/v.0/data
+[2026-10-08 10:23:37] [INFO] matter-server: Container 'matter-server' wieder gestartet
+[2026-10-08 10:23:37] [OK] matter-server: Backup abgeschlossen
+[2026-10-08 10:23:37] [WARN] mealie: Container 'mealie' laeuft nicht (nichts zu stoppen)
+[2026-10-08 10:23:38] [OK] mealie: rsync /opt/docker/mealie/data -> /mnt/systems/ovi/backups/mealie/files/v.0/data
+[2026-10-08 10:23:38] [OK] mealie: Backup abgeschlossen
+[2026-10-08 10:23:42] [INFO] monitoring: Container 'monitoring-kuma' gestoppt (Stop-Fenster)
+[2026-10-08 10:23:42] [INFO] monitoring: Container 'monitoring-grafana' gestoppt (Stop-Fenster)
+[2026-10-08 10:23:44] [OK] monitoring: rsync /opt/docker/uptime-kuma -> /mnt/systems/ovi/backups/monitoring/files/v.0/uptime-kuma
+[2026-10-08 10:23:55] [OK] monitoring: rsync /opt/docker/grafana/data -> /mnt/systems/ovi/backups/monitoring/files/v.0/data
+[2026-10-08 10:23:55] [INFO] monitoring: Container 'monitoring-kuma' wieder gestartet
+[2026-10-08 10:23:55] [INFO] monitoring: Container 'monitoring-grafana' wieder gestartet
+[2026-10-08 10:23:55] [OK] monitoring: Backup abgeschlossen
+[2026-10-08 10:23:55] [OK] mosquitto: rsync /opt/docker/mosquitto/config -> /mnt/systems/ovi/backups/mosquitto/files/v.0/config
+[2026-10-08 10:23:55] [OK] mosquitto: rsync /opt/docker/mosquitto/data -> /mnt/systems/ovi/backups/mosquitto/files/v.0/data
+[2026-10-08 10:23:55] [OK] mosquitto: Backup abgeschlossen
+[2026-10-08 10:23:55] [WARN] music-assistant: Container 'music-assistant' laeuft nicht (nichts zu stoppen)
+[2026-10-08 10:24:08] [OK] music-assistant: rsync /opt/docker/music-assistant -> /mnt/systems/ovi/backups/music-assistant/files/v.0/music-assistant
+[2026-10-08 10:24:08] [OK] music-assistant: Backup abgeschlossen
+[2026-10-08 10:24:09] [WARN] n8n: DB-Container 'n8n-db' existiert nicht auf diesem Host
+[2026-10-08 10:24:09] [WARN] n8n: Quellpfad existiert nicht auf diesem Host: /opt/docker/n8n/data
+[2026-10-08 10:24:09] [INFO] n8n: SKIP — Quelle fehlt komplett (Service nicht deployt oder Pfade/Container stimmen nicht)
+[2026-10-08 10:24:19] [INFO] network: Container 'omada-controller' gestoppt (Stop-Fenster)
+[2026-10-08 10:24:31] [OK] network: rsync /opt/docker/omada/data -> /mnt/systems/ovi/backups/network/files/v.0/data
+[2026-10-08 10:24:31] [OK] network: rsync /opt/docker/omada/work -> /mnt/systems/ovi/backups/network/files/v.0/work
+[2026-10-08 10:24:31] [INFO] network: Container 'omada-controller' wieder gestartet
+[2026-10-08 10:24:31] [OK] network: Backup abgeschlossen
+[2026-10-08 10:24:31] [WARN] node-red: Quellpfad existiert nicht auf diesem Host: /opt/docker/node-red
+[2026-10-08 10:24:31] [WARN] node-red: Datei-Backup uebersprungen (keine Quelldateien vorhanden) — Teil-Backup
+[2026-10-08 10:24:31] [OK] node-red: Backup abgeschlossen
+[2026-10-08 10:24:31] [WARN] open-notebook: DB-Container 'open-notebook-surrealdb-1' existiert nicht auf diesem Host
+[2026-10-08 10:24:31] [WARN] open-notebook: Quellpfad existiert nicht auf diesem Host: /opt/docker/open-notebook/data
+[2026-10-08 10:24:31] [INFO] open-notebook: SKIP — Quelle fehlt komplett (Service nicht deployt oder Pfade/Container stimmen nicht)
+[2026-10-08 10:24:31] [WARN] opencloud: Container 'opencloud' laeuft nicht (nichts zu stoppen)
+[2026-10-08 10:24:31] [OK] opencloud: rsync /opt/docker/opencloud -> /mnt/systems/ovi/backups/opencloud/files/v.0/opencloud
+[2026-10-08 10:24:31] [OK] opencloud: Backup abgeschlossen
+[2026-10-08 10:24:32] [INFO] overseerr: Container 'overseerr' gestoppt (Stop-Fenster)
+[2026-10-08 10:24:32] [OK] overseerr: rsync /opt/docker/overseerr -> /mnt/systems/ovi/backups/overseerr/files/v.0/overseerr
+[2026-10-08 10:24:32] [INFO] overseerr: Container 'overseerr' wieder gestartet
+[2026-10-08 10:24:32] [OK] overseerr: Backup abgeschlossen
+[2026-10-08 10:24:32] [WARN] paperless: DB-Container 'paperless-db' existiert nicht auf diesem Host
+[2026-10-08 10:24:32] [WARN] paperless: Quellpfad existiert nicht auf diesem Host: /opt/docker/paperless-ai
+[2026-10-08 10:24:32] [INFO] paperless: SKIP — Quelle fehlt komplett (Service nicht deployt oder Pfade/Container stimmen nicht)
+[2026-10-08 10:24:36] [INFO] plex: Container 'plex' gestoppt (Stop-Fenster)
+[2026-10-08 10:36:13] [FAIL] plex: rsync fehlgeschlagen fuer /opt/docker/plex/conf
+[2026-10-08 10:36:13] [INFO] plex: Container 'plex' wieder gestartet
+[2026-10-08 10:36:16] [INFO] prowlarr: Container 'prowlarr' gestoppt (Stop-Fenster)
+[2026-10-08 10:36:19] [OK] prowlarr: rsync /opt/docker/prowlarr -> /mnt/systems/ovi/backups/prowlarr/files/v.0/prowlarr
+[2026-10-08 10:36:19] [INFO] prowlarr: Container 'prowlarr' wieder gestartet
+[2026-10-08 10:36:19] [OK] prowlarr: Backup abgeschlossen
+[2026-10-08 10:36:23] [INFO] radarr: Container 'radarr' gestoppt (Stop-Fenster)
+[2026-10-08 10:36:24] [OK] radarr: rsync /opt/docker/radarr -> /mnt/systems/ovi/backups/radarr/files/v.0/radarr
+[2026-10-08 10:36:24] [INFO] radarr: Container 'radarr' wieder gestartet
+[2026-10-08 10:36:24] [OK] radarr: Backup abgeschlossen
+[2026-10-08 10:36:28] [INFO] sabnzbd: Container 'sabnzbd' gestoppt (Stop-Fenster)
+[2026-10-08 10:36:28] [OK] sabnzbd: rsync /opt/docker/sabnzbd -> /mnt/systems/ovi/backups/sabnzbd/files/v.0/sabnzbd
+[2026-10-08 10:36:28] [INFO] sabnzbd: Container 'sabnzbd' wieder gestartet
+[2026-10-08 10:36:28] [OK] sabnzbd: Backup abgeschlossen
+[2026-10-08 10:36:28] [OK] searxng: rsync /opt/docker/searxng/etc -> /mnt/systems/ovi/backups/searxng/files/v.0/etc
+[2026-10-08 10:36:28] [OK] searxng: Backup abgeschlossen
+[2026-10-08 10:36:31] [INFO] sonarr: Container 'sonarr' gestoppt (Stop-Fenster)
+[2026-10-08 10:36:33] [OK] sonarr: rsync /opt/docker/sonarr -> /mnt/systems/ovi/backups/sonarr/files/v.0/sonarr
+[2026-10-08 10:36:33] [INFO] sonarr: Container 'sonarr' wieder gestartet
+[2026-10-08 10:36:33] [OK] sonarr: Backup abgeschlossen
+[2026-10-08 10:36:33] [WARN] sparkyfitness: DB-Container 'sparkyfitness-db' existiert nicht auf diesem Host
+[2026-10-08 10:36:33] [WARN] sparkyfitness: Quellpfad existiert nicht auf diesem Host: /opt/docker/sparkyfitness/uploads
+[2026-10-08 10:36:33] [INFO] sparkyfitness: SKIP — Quelle fehlt komplett (Service nicht deployt oder Pfade/Container stimmen nicht)
+[2026-10-08 10:36:33] [INFO] tautulli: Container 'tautulli' gestoppt (Stop-Fenster)
+[2026-10-08 10:36:34] [OK] tautulli: rsync /opt/docker/tautulli -> /mnt/systems/ovi/backups/tautulli/files/v.0/tautulli
+[2026-10-08 10:36:35] [INFO] tautulli: Container 'tautulli' wieder gestartet
+[2026-10-08 10:36:35] [OK] tautulli: Backup abgeschlossen
+[2026-10-08 10:36:38] [INFO] tdarr: Container 'tdarr-tdarr' gestoppt (Stop-Fenster)
+[2026-10-08 10:37:31] [OK] tdarr: rsync /opt/docker/tdarr/server -> /mnt/systems/ovi/backups/tdarr/files/v.0/server
+[2026-10-08 10:37:32] [OK] tdarr: rsync /opt/docker/tdarr/configs -> /mnt/systems/ovi/backups/tdarr/files/v.0/configs
+[2026-10-08 10:37:32] [INFO] tdarr: Container 'tdarr-tdarr' wieder gestartet
+[2026-10-08 10:37:32] [OK] tdarr: Backup abgeschlossen
+[2026-10-08 10:37:32] [WARN] vaultwarden: sqlite3 nicht im Container verfuegbar — nutze Hilfscontainer-Fallback
+[2026-10-08 10:37:32] [FAIL] vaultwarden: sqlite .backup fehlgeschlagen fuer /data/db.sqlite3 (kein Bind-Mount aufloesbar)
+[2026-10-08 10:37:32] [OK] vaultwarden: rsync /opt/docker/vaultwarden -> /mnt/systems/ovi/backups/vaultwarden/files/v.0/vaultwarden
+[2026-10-08 10:37:32] [INFO] wanderer: Container 'wanderer_db' gestoppt (Stop-Fenster)
+[2026-10-08 10:37:33] [INFO] wanderer: Container 'wanderer_web' gestoppt (Stop-Fenster)
+[2026-10-08 10:37:38] [OK] wanderer: rsync /opt/docker/wanderer/db -> /mnt/systems/ovi/backups/wanderer/files/v.0/db
+[2026-10-08 10:37:38] [OK] wanderer: rsync /opt/docker/wanderer/uploads -> /mnt/systems/ovi/backups/wanderer/files/v.0/uploads
+[2026-10-08 10:37:38] [OK] wanderer: rsync /opt/docker/wanderer/plugins -> /mnt/systems/ovi/backups/wanderer/files/v.0/plugins
+[2026-10-08 10:37:38] [INFO] wanderer: Container 'wanderer_db' wieder gestartet
+[2026-10-08 10:37:38] [INFO] wanderer: Container 'wanderer_web' wieder gestartet
+[2026-10-08 10:37:38] [OK] wanderer: Backup abgeschlossen
+[2026-10-08 10:37:39] [OK] web-proxy: rsync /opt/docker/nginx/conf -> /mnt/systems/ovi/backups/web-proxy/files/v.0/conf
+[2026-10-08 10:37:39] [OK] web-proxy: rsync /opt/docker/nginx/vhost -> /mnt/systems/ovi/backups/web-proxy/files/v.0/vhost
+[2026-10-08 10:37:39] [OK] web-proxy: rsync /opt/docker/nginx/certs -> /mnt/systems/ovi/backups/web-proxy/files/v.0/certs
+[2026-10-08 10:37:39] [OK] web-proxy: rsync /opt/docker/nginx/htpasswd -> /mnt/systems/ovi/backups/web-proxy/files/v.0/htpasswd
+[2026-10-08 10:37:40] [OK] web-proxy: rsync /opt/docker/acme -> /mnt/systems/ovi/backups/web-proxy/files/v.0/acme
+[2026-10-08 10:37:41] [OK] web-proxy: rsync /opt/docker/yauh -> /mnt/systems/ovi/backups/web-proxy/files/v.0/yauh
+[2026-10-08 10:37:41] [OK] web-proxy: Backup abgeschlossen
+[2026-10-08 10:37:41] [WARN] Offene Luecken in diesem Lauf (13):
+[2026-10-08 10:37:41] [WARN]   - Quellpfad fehlt: /opt/docker/portainer (docker-gui)
+[2026-10-08 10:37:41] [WARN]   - Quellpfad fehlt: /opt/docker/dockge/data (docker-gui)
+[2026-10-08 10:37:41] [WARN]   - Quellpfad fehlt: /opt/docker/stacks (docker-gui)
+[2026-10-08 10:37:41] [WARN]   - DB-Container fehlt: litellm_db (litellm)
+[2026-10-08 10:37:41] [WARN]   - DB-Container fehlt: n8n-db (n8n)
+[2026-10-08 10:37:41] [WARN]   - Quellpfad fehlt: /opt/docker/n8n/data (n8n)
+[2026-10-08 10:37:41] [WARN]   - Quellpfad fehlt: /opt/docker/node-red (node-red)
+[2026-10-08 10:37:41] [WARN]   - DB-Container fehlt: open-notebook-surrealdb-1 (open-notebook)
+[2026-10-08 10:37:41] [WARN]   - Quellpfad fehlt: /opt/docker/open-notebook/data (open-notebook)
+[2026-10-08 10:37:41] [WARN]   - DB-Container fehlt: paperless-db (paperless)
+[2026-10-08 10:37:41] [WARN]   - Quellpfad fehlt: /opt/docker/paperless-ai (paperless)
+[2026-10-08 10:37:41] [WARN]   - DB-Container fehlt: sparkyfitness-db (sparkyfitness)
+[2026-10-08 10:37:41] [WARN]   - Quellpfad fehlt: /opt/docker/sparkyfitness/uploads (sparkyfitness)
+[2026-10-08 10:37:41] [INFO] Lauf beendet: OK=33 FAIL=3 SKIP=7
+[2026-10-08 10:37:41] [INFO] Consistency-Check: pruefe Ziel-Staende ...
+[2026-10-08 10:37:41] [WARN] Consistency: analytics: Datei-Stand existiert, enthaelt aber keine Dateien
+[2026-10-08 10:37:41] [WARN] Consistency: docker-gui: kein Datei-Stand in /mnt/systems/ovi/backups/docker-gui/files/v.0
+[2026-10-08 10:37:41] [WARN] Consistency: ghost: DB-Stand existiert, aber leer/0-Byte-Dumps in /mnt/systems/ovi/backups/ghost/db/v.0
+[2026-10-08 10:37:41] [WARN] Consistency: litellm: kein DB-Stand in /mnt/systems/ovi/backups/litellm/db/v.0
+[2026-10-08 10:37:41] [WARN] Consistency: n8n: kein DB-Stand in /mnt/systems/ovi/backups/n8n/db/v.0
+[2026-10-08 10:37:41] [WARN] Consistency: n8n: kein Datei-Stand in /mnt/systems/ovi/backups/n8n/files/v.0
+[2026-10-08 10:37:41] [WARN] Consistency: node-red: kein Datei-Stand in /mnt/systems/ovi/backups/node-red/files/v.0
+[2026-10-08 10:37:41] [WARN] Consistency: open-notebook: kein DB-Stand in /mnt/systems/ovi/backups/open-notebook/db/v.0
+[2026-10-08 10:37:41] [WARN] Consistency: open-notebook: kein Datei-Stand in /mnt/systems/ovi/backups/open-notebook/files/v.0
+[2026-10-08 10:37:41] [WARN] Consistency: paperless: kein DB-Stand in /mnt/systems/ovi/backups/paperless/db/v.0
+[2026-10-08 10:37:41] [WARN] Consistency: paperless: kein Datei-Stand in /mnt/systems/ovi/backups/paperless/files/v.0
+[2026-10-08 10:37:41] [WARN] Consistency: sparkyfitness: kein DB-Stand in /mnt/systems/ovi/backups/sparkyfitness/db/v.0
+[2026-10-08 10:37:41] [WARN] Consistency: sparkyfitness: kein Datei-Stand in /mnt/systems/ovi/backups/sparkyfitness/files/v.0
+[2026-10-08 10:37:41] [WARN] Consistency: vaultwarden: DB-Stand existiert, aber leer/0-Byte-Dumps in /mnt/systems/ovi/backups/vaultwarden/db/v.0
+[2026-10-08 10:37:41] [WARN] Consistency-Check: 14 Problem(e) gefunden

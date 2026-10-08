@@ -62,6 +62,7 @@ fi
 
 log_init
 _acquire_lock
+log_info "Version ($(version_string))"
 log_info "Dispatcher start: ${#SVC_FILES[@]} Deklarationen, dry-run=$DRY_RUN, Ziel=$BACKUP_ROOT"
 
 # Preflight: Ohne Docker-Daemon wuerden alle Container-Checks falsch-negativ
@@ -89,6 +90,9 @@ fi
 FAILS=0
 OKS=0
 SKIPS=0
+STAT_DUMPS=0
+STAT_FILES=0
+STAT_BYTES=0
 WARTENDE_LUECKEN=()
 
 validate_declaration() {
@@ -230,7 +234,11 @@ backup_one_service() {
       if [[ "$skip_db" == "true" ]]; then
         log_warn "$SVC_NAME: DB-Backup uebersprungen (Container fehlt/laeuft nicht) — Teil-Backup"
       else
-        if ! dump_database "$(svc_db_dir "$SVC_NAME")"; then ((rc+=1)); fi
+        if dump_database "$(svc_db_dir "$SVC_NAME")"; then
+          ((STAT_DUMPS+=1))
+        else
+          ((rc+=1))
+        fi
       fi
       ;;
   esac
@@ -271,10 +279,50 @@ backup_one_service() {
   esac
 
   if [[ $rc -eq 0 ]]; then
-    ((OKS+=1)); log_ok "$SVC_NAME: Backup abgeschlossen"
+    ((OKS+=1))
   else
     ((FAILS+=1))
   fi
+  consistency_check_service
+}
+
+# ----------------------------------------------------------------------
+# Consistency-Check je Service: Ziel-Stand unmittelbar nach dem Backup pruefen
+# - DB-Dumps: vorhanden und groesser 0 Bytes (still-leere Dumps entlarven)
+# - Dateien: mindestens eine Datei im Ziel-Stand
+# - nur pruefen, was dieser Lauf auch schreiben wollte (skip_* beachten)
+# ----------------------------------------------------------------------
+consistency_check_service() {
+  local problems=0 dest dump
+  [[ "$DRY_RUN" == "true" ]] && return 0
+  case "$SVC_CATEGORY" in
+    db_only|db_and_files)
+      if [[ "$skip_db" != "true" ]]; then
+        dest="$BACKUP_ROOT/$SVC_NAME/db/v.0"
+        if [[ ! -d "$dest" ]]; then
+          log_warn "Consistency: $SVC_NAME: kein DB-Stand in $dest"; problems=1
+        else
+          dump="$(find "$dest" -maxdepth 1 -type f -size +0c | head -1)"
+          if [[ -z "$dump" ]]; then
+            log_warn "Consistency: $SVC_NAME: DB-Stand existiert, aber leer/0-Byte-Dumps in $dest"; problems=1
+          fi
+        fi
+      fi
+      ;;
+  esac
+  case "$SVC_CATEGORY" in
+    files_only|config_only|db_and_files)
+      if [[ "$skip_files" != "true" ]]; then
+        dest="$BACKUP_ROOT/$SVC_NAME/files/v.0"
+        if [[ ! -d "$dest" ]]; then
+          log_warn "Consistency: $SVC_NAME: kein Datei-Stand in $dest"; problems=1
+        elif [[ -z "$(find "$dest" -type f -print -quit)" ]]; then
+          log_warn "Consistency: $SVC_NAME: Datei-Stand existiert, enthaelt aber keine Dateien"; problems=1
+        fi
+      fi
+      ;;
+  esac
+  return $problems
 }
 
 backup_files_for_service() {
@@ -294,6 +342,10 @@ backup_files_for_service() {
       local -a excludes=("${FILE_EXCLUDES[@]:-}")
       if rsync_backup "$p" "$dest/$(basename "$p")" "${excludes[@]}"; then
         log_ok "$SVC_NAME: rsync $p -> $dest/$(basename "$p")"
+        local -a _fs
+        _fs=($(find "$dest/$(basename "$p")" -type f 2>/dev/null | wc -l; du -sb "$dest/$(basename "$p")" 2>/dev/null | cut -f1))
+        STAT_FILES=$((STAT_FILES + ${_fs[0]:-0}))
+        STAT_BYTES=$((STAT_BYTES + ${_fs[1]:-0}))
       else
         log_fail "$SVC_NAME: rsync fehlgeschlagen fuer $p"; ((rc+=1))
       fi
@@ -322,69 +374,33 @@ if [[ ${#WARTENDE_LUECKEN[@]} -gt 0 ]]; then
   done
 fi
 
-log_info "Lauf beendet: OK=$OKS FAIL=$FAILS SKIP=$SKIPS"
-
-# ----------------------------------------------------------------------
-# Consistency-Check: Ziel gegen Quelle pruefen (nur bei echtem Lauf)
-# - je Service: existiert der Ziel-Stand und ist er nicht leer?
-# - DB-Dumps: vorhanden und groesser 0 Bytes (still-leere Dumps entlarven)
-# - Dateien: mindestens eine Datei im Ziel-Stand
-# - zusaetzlich: rsync-Verifikation von Stichproben (Schnellcheck)
-# ----------------------------------------------------------------------
-consistency_check() {
-  local problems=0 svc dest dump
-  if [[ "$DRY_RUN" == "true" ]]; then
-    log_dry "Consistency-Check: wuerde Backups gegen Quellen pruefen"
-    return 0
-  fi
-  log_info "Consistency-Check: pruefe Ziel-Staende ..."
-  for f in "${SVC_FILES[@]}"; do
-    load_declaration "$f" || continue
-    case "$SVC_CATEGORY" in
-      ignore) continue ;;
-    esac
-    [[ -n "${SERVICE_FILTER:-}" && "$SVC_NAME" != "$SERVICE_FILTER" ]] && continue
-    case "$SVC_CATEGORY" in
-      db_only|db_and_files)
-        dest="$BACKUP_ROOT/$SVC_NAME/db/v.0"
-        if [[ ! -d "$dest" ]]; then
-          log_warn "Consistency: $SVC_NAME: kein DB-Stand in $dest"
-          problems=$((problems+1))
-        else
-          # mind. ein Dump mit >0 Bytes (leere Dumps = stiller Fehlschlag)
-          dump="$(find "$dest" -maxdepth 1 -type f -size +0c | head -1)"
-          if [[ -z "$dump" ]]; then
-            log_warn "Consistency: $SVC_NAME: DB-Stand existiert, aber leer/0-Byte-Dumps in $dest"
-            problems=$((problems+1))
-          fi
-        fi
-        ;;
-    esac
-    case "$SVC_CATEGORY" in
-      files_only|config_only|db_and_files)
-        dest="$BACKUP_ROOT/$SVC_NAME/files/v.0"
-        if [[ ! -d "$dest" ]]; then
-          log_warn "Consistency: $SVC_NAME: kein Datei-Stand in $dest"
-          problems=$((problems+1))
-        else
-          if [[ -z "$(find "$dest" -type f -print -quit)" ]]; then
-            log_warn "Consistency: $SVC_NAME: Datei-Stand existiert, enthaelt aber keine Dateien"
-            problems=$((problems+1))
-          fi
-        fi
-        ;;
-    esac
-  done
-  if [[ $problems -gt 0 ]]; then
-    log_warn "Consistency-Check: $problems Problem(e) gefunden"
-  else
-    log_ok "Consistency-Check: alle Ziel-Staende plausibel"
+# Summary: menschenlesbar + maschinenlesbar (last-run-summary.txt)
+human_size() {
+  local b="${1:-0}"
+  if   (( b >= 1024*1024*1024 )); then echo "$((b / 1024 / 1024 / 1024))GB"
+  elif (( b >= 1024*1024 ));      then echo "$((b / 1024 / 1024))MB"
+  elif (( b >= 1024 ));           then echo "$((b / 1024))KB"
+  else                                echo "${b}B"
   fi
 }
-consistency_check
-
+log_info "Summary: $OKS Services backed up, $STAT_DUMPS database dumps, $STAT_FILES Files ($(human_size $STAT_BYTES))"
+log_info "Lauf beendet: OK=$OKS FAIL=$FAILS SKIP=$SKIPS"
 if [[ "$DRY_RUN" != "true" ]]; then
-  echo "OK=$OKS FAIL=$FAILS SKIP=$SKIPS" > "$BACKUP_ROOT/_meta/last-run-summary.txt" 2>/dev/null || true
+  printf 'OK=%s FAIL=%s SKIP=%s DUMPS=%s FILES=%s BYTES=%s\n' \
+    "$OKS" "$FAILS" "$SKIPS" "$STAT_DUMPS" "$STAT_FILES" "$STAT_BYTES" \
+    > "$BACKUP_ROOT/_meta/last-run-summary.txt" 2>/dev/null || true
+fi
+
+# ----------------------------------------------------------------------
+# Gesamt-Check am Ende: per-Service-Consistency laeuft direkt nach jedem
+# Service (consistency_check_service). Hier nur noch das Fazit ueber den Lauf.
+# ----------------------------------------------------------------------
+if [[ "$DRY_RUN" != "true" ]]; then
+  if [[ $FAILS -gt 0 ]]; then
+    log_warn "Gesamt-Check: $FAILS Service(s) mit Fehlern — Details siehe oben"
+  else
+    log_ok "Gesamt-Check: alle geplanten Backups erfolgreich und konsistent"
+  fi
 fi
 
 # Exit-Code: 0 wenn keine Fehler, sonst 1 (unabhaengig von der Anzahl)

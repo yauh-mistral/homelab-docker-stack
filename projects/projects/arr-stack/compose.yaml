@@ -1,0 +1,122 @@
+version: "3"
+services:
+  sonarr:
+    image: linuxserver/sonarr
+    container_name: sonarr
+    restart: always
+    networks:
+      - shared_proxy
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=sonarr.islasorna.de
+    volumes:
+      - /opt/docker/sonarr:/config
+      - /mnt/media/video/tv:/tv
+      - /opt/downloads/completed:/downloads
+  lidarr:
+    image: linuxserver/lidarr
+    container_name: lidarr
+    restart: always
+    networks:
+      - shared_proxy
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=lidarr.islasorna.de
+    volumes:
+      - /opt/docker/lidarr:/config
+      - /mnt/media/music/lidarr:/music
+      - /opt/downloads/completed:/downloads
+  bazarr:
+    container_name: bazarr
+    environment:
+      - HOME=/root
+      - TERM=xterm
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=bazarr.islasorna.de
+    image: linuxserver/bazarr:latest
+    networks:
+      - shared_proxy
+    restart: always
+    volumes:
+      - /mnt/media/video/tv:/tv:rw
+      - /mnt/media/video/movies:/movies:rw
+      - /opt/docker/bazarr:/config:rw
+  radarr:
+    container_name: radarr
+    environment:
+      - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - HOME=/root
+      - LANGUAGE=en_US.UTF-8
+      - LANG=en_US.UTF-8
+      - TERM=xterm
+      - XDG_CONFIG_HOME=/config/xdg
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=radarr.islasorna.de
+    image: linuxserver/radarr:latest
+    networks:
+      - shared_proxy
+    restart: always
+    volumes:
+      - /opt/docker/radarr:/config:rw
+      - /opt/downloads/completed:/downloads:rw
+      - /mnt/media/video/movies:/movies:rw
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    networks:
+      - shared_proxy
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=prowlarr.islasorna.de
+    volumes:
+      - /opt/docker/prowlarr:/config
+    restart: always
+  sabnzbd:
+    image: linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    networks:
+      - shared_proxy
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=sabnzb.islasorna.de
+    volumes:
+      - /opt/docker/sabnzbd:/config
+      - /opt/downloads/completed:/downloads #optional
+      - /opt/downloads/intermediate:/incomplete-downloads #optional
+    restart: always
+  overseerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    init: true
+    container_name: overseerr
+    networks:
+      - shared_proxy
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/status || exit 1
+      start_period: 20s
+      timeout: 3s
+      interval: 15s
+      retries: 3
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VIRTUAL_HOST=overseerr.islanublar.de 
+    volumes:
+      - /opt/docker/overseerr:/app/config # Contains all relevant configuration files.
+
+networks:
+  shared_proxy:
+    external: true
