@@ -79,14 +79,11 @@ FAILS=0
 for svc in "${TARGETS[@]}"; do
   container_exists "$svc" || { log_fail "$svc: Container existiert nicht"; ((FAILS+=1)); continue; }
   load_service_env "$svc"
-  # Neuesten Dump suchen
+  # Neuesten Dump suchen — v.0 ist der frischeste Stand (rsnapshot-Rotation)
   base="$BACKUP_ROOT/$SVC_NAME/db"
-  dump_dir=""
-  latest=""
-  for d in "$base"/*; do
-    [[ -d "$d" ]] || continue
-    [[ -z "$latest" || "$(basename "$d")" > "$latest" ]] && latest="$(basename "$d")" && dump_dir="$d"
-  done
+  dump_dir="$base/v.0"
+  latest="v.0"
+  [[ -d "$dump_dir" ]] || dump_dir=""
   if [[ -z "$dump_dir" ]]; then
     log_fail "$svc: kein Dump in $base gefunden — Backup vorher laufen lassen!"
     ((FAILS+=1)); continue
@@ -95,8 +92,20 @@ for svc in "${TARGETS[@]}"; do
   [[ -f "$dump" ]] || { log_fail "$svc: Dump-Datei fehlt: $dump"; ((FAILS+=1)); continue; }
 
   log_info "$svc: spiele Dump $dump in Test-DB ein..."
-  if gunzip -c "$dump" | docker exec -i "$TEST_PG_NAME" psql -U test -d testdb --set ON_ERROR_STOP=off >/dev/null 2>&1; then
-    tables="$(docker exec "$TEST_PG_NAME" psql -U test -d testdb -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'" 2>/dev/null)"
+  # pg_dumpall-Dumps (DB_DUMP_ALL) enthalten \connect-Anweisungen und legen
+  # Tabellen in der Original-DB an — Restore in die Original-DB-Role/Name simulieren.
+  # Einfache pg_dump-Dumps landen in der Ziel-DB testdb (kein \connect enthalten).
+  restore_db="testdb"
+  if grep -aq '^\\connect' <(gunzip -c "$dump" | head -50); then
+    restore_db="$DB_NAME"
+  fi
+  if gunzip -c "$dump" | docker exec -i "$TEST_PG_NAME" psql -U test -d "$restore_db" --set ON_ERROR_STOP=off >/dev/null 2>&1; then
+    # Bei pg_dumpall wurde per \connect gewechselt; Tabellenzaehlung in der Original-DB.
+    # Originale DB muss im Wegwerf-Postgres existieren — dafuer bei Bedarf anlegen.
+    if [[ "$restore_db" != "testdb" ]] && ! docker exec "$TEST_PG_NAME" psql -U test -d testdb -tAc "SELECT 1 FROM pg_database WHERE datname='$restore_db'" | grep -q 1; then
+      docker exec "$TEST_PG_NAME" psql -U test -d testdb -c "CREATE DATABASE \"$restore_db\"" >/dev/null 2>&1
+    fi
+    tables="$(docker exec "$TEST_PG_NAME" psql -U test -d "$restore_db" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'" 2>/dev/null)"
     if [[ "${tables:-0}" -gt 0 ]]; then
       log_ok "$svc: Restore-Test BESTANDEN ($tables Tabellen aus Stand $latest)"
     else
@@ -106,6 +115,11 @@ for svc in "${TARGETS[@]}"; do
   else
     log_fail "$svc: psql-Import fehlgeschlagen"
     ((FAILS+=1))
+  fi
+  # Test-DBs fuer naechsten Service leeren
+  docker exec "$TEST_PG_NAME" psql -U test -d testdb -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" >/dev/null 2>&1
+  if [[ "$restore_db" != "testdb" ]]; then
+    docker exec "$TEST_PG_NAME" psql -U test -d testdb -c "DROP DATABASE IF EXISTS \"$restore_db\" WITH (FORCE)" >/dev/null 2>&1
   fi
   # Test-DB fuer naechsten Service leeren
   docker exec "$TEST_PG_NAME" psql -U test -d testdb -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" >/dev/null 2>&1
