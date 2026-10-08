@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # make-env-examples.sh — Migration .env -> maskierte .env.example
-# v0.0.1
 #
 # Liest die produktiven .env-Dateien der Stacks (STACKS_DIR) und erzeugt daraus
 # .env.example-Dateien mit maskierten Secrets. Nicht-Secrets bleiben als
@@ -19,7 +18,6 @@
 set -u
 set -o pipefail
 
-SCRIPT_VERSION="v0.0.1"
 STACKS_DIR="/opt/docker/arcane/projects"
 OUT_DIR=""
 FORCE=false
@@ -55,21 +53,28 @@ is_secret() {
 }
 
 # --- Herstellungsanweisung pro Variablenklasse (erste Treffer gewinnt) ---
+# SMTP- und Provider-Credentials kommen vom Mail-/Account-Provider, nicht random.
 gen_hint() {
   local var="$1"
   case "$var" in
-    *API_KEY*|*API_TOKEN*|*TOKEN*)
-      echo "# Erstellen beim jeweiligen Anbieter (Konsole/Dashboard) - nicht selbst generieren" ;;
+    *SMTP_PASSWORD*|*SMTP_PASS*|*EMAIL_PASS*|*EMAIL_PASSWORD*)
+      echo "# Vom Mail-Provider vorgegeben (Webmail-/SMTP-Passwort) - NICHT selbst generieren" ;;
     *ENCRYPTION_KEY*)
       echo "# Erzeugen: openssl rand -hex 32" ;;
     *SALT*)
-      echo "# Erzeugen: openssl rand -hex 16" ;;
+      echo "# Erzeugen: openssl rand -hex 32" ;;
     *JWT_SECRET*|*WEBHOOK_SECRET*|*PROXY_SECRET*|*SECRET_KEY*|*MASTER_KEY*|*AUTH_SECRET*)
       echo "# Erzeugen: openssl rand -hex 32" ;;
     *ROOT_PASSWORD*|*PASSWORD*|*PASSWD*)
       echo "# Erzeugen: openssl rand -base64 24" ;;
     *PASSKEYS*)
       echo "# Pro Periphery-Instanz ein Key, Komma-getrennt; Erzeugen: openssl rand -base64 24" ;;
+    *API_KEY*|*API_TOKEN*)
+      echo "# Erstellen beim jeweiligen Anbieter (Konsole/Dashboard) - nicht selbst generieren" ;;
+    *TOKEN*)
+      # Self-hosted-Services (vaultwarden ADMIN_TOKEN, crawl4ai): Token einmalig
+      # selbst setzen/rotieren; kein externer Anbieter noetig
+      echo "# Einmalig selbst festlegen/rotieren: openssl rand -base64 48 (self-hosted, kein Anbieter)" ;;
     *)
       echo "# Secret - maskiert; Herkunft/Konvention siehe projects/env-details.md" ;;
   esac
@@ -102,18 +107,31 @@ process_env() {
     return 0
   fi
   : > "$out"
-  while IFS= read -r line; do
+  # Vorherige Zeile merken: Wenn bereits ein Kommentar ueber der Variablen
+  # steht, der die Herstellung erklaert, keinen zusaetzlichen Hint anbringen.
+  local prev=""
+  # while-or-read verliert die letzte Zeile, wenn die Datei keinen
+  # abschliessenden Zeilenumbruch hat -> read haengt nachfolgenden Code an,
+  # daher die letzte (umbruchlose) Zeile explizit behandeln.
+  while IFS= read -r line || [[ -n "$line" ]]; do
     if [[ "$line" =~ ^[[:space:]]*(#|$) ]]; then
       echo "$line" >> "$out"
+      prev="$line"
       continue
     fi
     var="${line%%=*}"
     if is_secret "$var"; then
-      echo "$(gen_hint "$var")" >> "$out"
-      echo "$var=REPLACE_ME" >> "$out"
+      # Nur ergaenzen, wenn die Vorzeile kein Kommentar ist (keine Duplikate)
+      if [[ "$prev" =~ ^[[:space:]]*# ]]; then
+        echo "$var=REPLACE_ME" >> "$out"
+      else
+        echo "$(gen_hint "$var")" >> "$out"
+        echo "$var=REPLACE_ME" >> "$out"
+      fi
     else
       echo "$line" >> "$out"
     fi
+    prev="$line"
   done < "$envfile"
   echo "Erzeugt: $out"
 }
