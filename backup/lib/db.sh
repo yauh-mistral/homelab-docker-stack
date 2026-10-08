@@ -141,12 +141,18 @@ dump_forgejo() {
   # Option fuer Einzelfaelle ueberschreiben (z.B. voller Dump gewuenscht).
   local -a skip_repo=(--skip-repository)
   if [[ "${DB_DUMP_EXTRA:-}" == *full* ]]; then skip_repo=(); fi
-  if docker exec --user git "$DB_CONTAINER" "$binary" dump "${skip_repo[@]}" --tempdir /tmp --type zip --file /tmp/forgejo-dump.zip 2>>"$LOG_FILE" \
-    && docker cp "$DB_CONTAINER:/tmp/forgejo-dump.zip" "$out" >/dev/null 2>>"$LOG_FILE" \
+  local dumptmp=""
+  [[ -n "${LOG_FILE:-}" ]] && dumptmp="$(mktemp)"
+  if { docker exec --user git "$DB_CONTAINER" "$binary" dump "${skip_repo[@]}" --tempdir /tmp --type zip --file /tmp/forgejo-dump.zip 2>"${dumptmp:-/dev/null}"; \
+       docker cp "$DB_CONTAINER:/tmp/forgejo-dump.zip" "$out" >/dev/null 2>>"${dumptmp:-/dev/null}"; } \
     && docker exec "$DB_CONTAINER" rm -f /tmp/forgejo-dump.zip; then
+    [[ -n "$dumptmp" && -s "$dumptmp" ]] && tee_ext "$SVC_NAME" <"$dumptmp" >>"$LOG_FILE"
+    rm -f "${dumptmp:-/dev/null}" 2>/dev/null
     log_ok "$SVC_NAME: $binary dump -> $out ($(du -h "$out" | cut -f1))"
     return 0
   fi
+  [[ -n "$dumptmp" && -s "$dumptmp" ]] && tee_ext "$SVC_NAME" <"$dumptmp" >>"$LOG_FILE"
+  rm -f "${dumptmp:-/dev/null}" 2>/dev/null
   log_fail "$SVC_NAME: $binary dump fehlgeschlagen"
   docker exec "$DB_CONTAINER" rm -f /tmp/forgejo-dump.zip 2>/dev/null
   rm -f "$out"
