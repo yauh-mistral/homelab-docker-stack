@@ -72,14 +72,16 @@ copy_file "$SCRIPT_DIR/backup.sh" "$INSTALL_HOME/"
 copy_file "$SCRIPT_DIR/restore.sh" "$INSTALL_HOME/"
 copy_file "$SCRIPT_DIR/test-restore.sh" "$INSTALL_HOME/"
 copy_tree "$SCRIPT_DIR/lib" "$INSTALL_HOME/lib"
-copy_tree "$SCRIPT_DIR/services.d" "$INSTALL_HOME/services.d"
+copy_tree "$SCRIPT_DIR/lib" "$INSTALL_HOME/lib"
+copy_tree "$SCRIPT_DIR/policies.d" "$INSTALL_HOME/policies.d"
+copy_file "$SCRIPT_DIR/policy.conf" "$INSTALL_HOME/"
 chmod +x "$INSTALL_HOME"/*.sh
 
 # Installationszeitpunkt in die installierte Kopie von lib/common.sh schreiben,
 # damit jedes Backup-/Restore-Log die Version + Install-Zeit ausweist.
 sed -i "s|^INSTALL_STAMP=\"\${INSTALL_STAMP:-.*}\"|INSTALL_STAMP=\"$INSTALL_STAMP\"|" \
   "$INSTALL_HOME/lib/common.sh" || true
-echo "Kopiert: backup.sh, restore.sh, test-restore.sh, lib/, services.d/ -> $INSTALL_HOME (Version $LIB_VERSION, installiert $INSTALL_STAMP)"
+echo "Kopiert: backup.sh, restore.sh, test-restore.sh, lib/, policies.d/, policy.conf -> $INSTALL_HOME (Version $LIB_VERSION, installiert $INSTALL_STAMP)"
 
 # --- Konfiguration schreiben (vorhandene nicht ueberschreiben, nur ergaenzen) ---
 if [[ -f "$CONF_FILE" ]]; then
@@ -87,7 +89,7 @@ if [[ -f "$CONF_FILE" ]]; then
   missing=()
   grep -q "^STACKS_DIR=" "$CONF_FILE" || missing+=("STACKS_DIR=$STACKS_DIR")
   grep -q "^BACKUP_ROOT=" "$CONF_FILE" || missing+=("BACKUP_ROOT=$BACKUP_ROOT")
-  grep -q "^SERVICES_DIR=" "$CONF_FILE" || missing+=("SERVICES_DIR=$INSTALL_HOME/services.d")
+  grep -q "^POLICY_DIR=" "$CONF_FILE" || missing+=("POLICY_DIR=$INSTALL_HOME/policies.d")
   grep -q "^KEEP_VERSIONS=" "$CONF_FILE" || missing+=("KEEP_VERSIONS=14")
   if [[ ${#missing[@]} -gt 0 ]]; then
     printf '%s\n' "${missing[@]}" >> "$CONF_FILE"
@@ -100,8 +102,8 @@ else
 STACKS_DIR=$STACKS_DIR
 # Ziel: NAS-Mount (Dispatcher verweigert Start, wenn kein Mount)
 BACKUP_ROOT=$BACKUP_ROOT
-# Heimat der Service-Deklarationen (installierte Kopie, unabhaengig vom Repo)
-SERVICES_DIR=$INSTALL_HOME/services.d
+# Heimat der Policy-Overlays (installierte Kopie, unabhaengig vom Repo)
+POLICY_DIR=$INSTALL_HOME/policies.d
 # Optional: Restic (erst aktivieren, wenn restic installiert + Passwortdatei existiert)
 USE_RESTIC=false
 # RESTIC_PASSWORD_FILE=/etc/restic-password

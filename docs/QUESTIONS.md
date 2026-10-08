@@ -60,7 +60,7 @@ Jede getroffene Annahme ist hier mit Begründung aufgelistet. Nicht schließen �
 
 36. **Heimat des Backup-Systems**: Bewusst NICHT `/opt/docker/arcane` (Repo), sondern `/opt/docker/backup` als eigene Installation via `install.sh` (`--home` konfigurierbar). Repo-Updates überschreiben die Installation nicht; Re-Run des Installers aktualisiert sie (rsync/ohne `--delete`: lokal angepasste Deklarationen bleiben).
 37. **Quelle konfigurierbar**: `STACKS_DIR` in `/etc/backup.conf` zeigt auf die Compose-Stacks + `.env` (z.B. `/opt/docker/arcane/projects`). Deklarationen nutzen `%STACKS_DIR%`-Platzhalter (bislang `ghost.env: ENV_FILE`), aufgelöst in `load_declaration`. Dispatcher startet nicht ohne `STACKS_DIR` (Fail-fast gegen falsch aufgelöste Pfade).
-38. **Ziel konfigurierbar**: bleibt `BACKUP_ROOT` (Default `/mnt/systems/backups/ovi`), jetzt ebenfalls klar in `/etc/backup.conf` dokumentiert; `SERVICES_DIR` ist der dritte konfigurierbare Pfad (Heimat der Deklarationen nach Installation).
+38. **Ziel konfigurierbar**: bleibt `BACKUP_ROOT` (Default `/mnt/systems/backups/ovi`), jetzt ebenfalls klar in `/etc/backup.conf` dokumentiert; `POLICY_DIR` ist der dritte konfigurierbare Pfad (Heimat der Policy-Overlays nach Installation).
 39. **cp-Fallback im Installer**: rsync nicht garantiert auf Minimal-Hosts — Installer funktioniert mit beiden (getestet ohne rsync).
 
 ## Ergänzungen nach Robustheits-Anforderung (PR 4)

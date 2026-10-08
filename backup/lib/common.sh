@@ -13,13 +13,12 @@ set -o pipefail
 # BACKUP_ROOT: Ziel (NAS)
 # STACKS_DIR:   Quelle der Compose-Stacks und deren .env-Dateien (z.B. /opt/docker/arcane/projects)
 #               Deklarationen koennen den Platzhalter %STACKS_DIR% nutzen.
-# SERVICES_DIR: Heimat der Service-Deklarationen (Default: neben diesem Skript)
 # --- Versionierung (Semantic Versioning) ---
 # Skript-Version des Backup-Systems. PATCH=Fixes, MINOR=Features,
 # MAJOR=Breaking Changes (Config/Deklarationsformat/CLI).
 # INSTALL_STAMP wird von install.sh mit Installationszeitpunkt versehen
 # (Format: "YYYY-MM-DD HH:MM"), damit Logs erkennen lassen, welcher Stand lief.
-SCRIPT_VERSION="v0.0.1"
+SCRIPT_VERSION="v1.0.0"
 INSTALL_STAMP="${INSTALL_STAMP:-not-installed}"
 version_string() {
   if [[ "$INSTALL_STAMP" == "not-installed" ]]; then
@@ -86,70 +85,6 @@ _acquire_lock() {
     log_fail "Ein anderer Backup-Lauf ist bereits aktiv ($lockfile)"
     exit 1
   fi
-}
-
-# --- Service-Deklarationen einlesen ---
-# Erwartet: SERVICES_DIR (Pfad zu services.d), gefuellte Liste SVC_FILES (global)
-load_service_declarations() {
-  local dir="${1:?services.d-Pfad fehlt}"
-  SVC_FILES=()
-  local f
-  for f in "$dir"/*.env; do
-    [[ -e "$f" ]] || continue
-    SVC_FILES+=("$f")
-  done
-  if [[ ${#SVC_FILES[@]} -eq 0 ]]; then
-    log_fail "Keine Service-Deklarationen in $dir gefunden"
-    exit 1
-  fi
-  # deterministische Reihenfolge
-  SVC_FILES=($(printf '%s\n' "${SVC_FILES[@]}" | sort))
-}
-
-# Laedt eine Deklaration und validiert Pflichtfelder defensiv.
-# Optional kann eine Deklaration ENV_FILE=<pfad> setzen, um Passwoerter aus der
-# Produktiv-.env des Stacks nachzuladen (z.B. ENV_FILE=/opt/docker/arcane/projects/ghost/.env).
-# Optional DB_PASSWORD_VAR=<name> waehlt die Passwort-Variable aus der ENV_FILE
-# (Default: DB_PASSWORD). ENV_FILE wird nur gelesen, nie veraendert.
-# setzt: SVC (assoz. via Variablen SVC_NAME, SVC_CATEGORY, ...)
-load_declaration() {
-  local file="${1:?Deklarationsdatei fehlt}"
-  # Reset
-  SVC_NAME="" SVC_CATEGORY="" SVC_STACK="" DB_TYPE="" DB_CONTAINER="" DB_USER=""
-  DB_NAME="" DB_DUMP_ALL="" DB_DUMP_EXTRA="" FILE_PATHS=() FILE_EXCLUDES=()
-  SQLITE_FILES=() STOP_CONTAINERS=() PRE_DUMP_HOOK="" POST_DUMP_HOOK=""
-  ENV_FILE="" DB_PASSWORD="" DB_PASSWORD_VAR=""
-  # shellcheck disable=SC1090
-  source "$file" || return 1
-  SVC_NAME="${SVC_NAME:-$(basename "$file" .env)}"
-  if [[ -z "${SVC_CATEGORY:-}" ]]; then
-    log_fail "$SVC_NAME: SVC_CATEGORY fehlt in $file"
-    return 1
-  fi
-  # Platzhalter %STACKS_DIR% in ENV_FILE und FILE_PATHS aufloesen
-  # (Quelle der Stacks ist konfigurierbar; Compose-Only-Deklarationen zeigen
-  # auf die compose.yaml im Stack-Verzeichnis statt auf Datenpfade)
-  if [[ -n "${STACKS_DIR:-}" ]]; then
-    local _i
-    for _i in "${!FILE_PATHS[@]}"; do
-      FILE_PATHS["$_i"]="${FILE_PATHS["$_i"]//%STACKS_DIR%/$STACKS_DIR}"
-    done
-    ENV_FILE="${ENV_FILE//%STACKS_DIR%/$STACKS_DIR}"
-  fi
-  # Passwoerter aus Stack-.env nachladen (nur falls ENV_FILE gesetzt und lesbar)
-  if [[ -n "${ENV_FILE:-}" ]]; then
-    if [[ -r "$ENV_FILE" ]]; then
-      local _pwvar="${DB_PASSWORD_VAR:-DB_PASSWORD}"
-      # nur die benoetigte Passwort-Variable uebernehmen, nicht die gesamte .env
-      # (verhindert Kollisions-Risiken mit Deklarations- und Dispatcher-Variablen)
-      local _pw
-      _pw="$(grep -E "^${_pwvar}=" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d '"' | tr -d "'")" || true
-      DB_PASSWORD="${_pw}"
-    else
-      log_warn "$SVC_NAME: ENV_FILE '$ENV_FILE' nicht lesbar — DB-Backup ohne Passwort moeglicherweise nicht moeglich"
-    fi
-  fi
-  return 0
 }
 
 # --- Existenzpruefungen (fuer Dry-Run und echte Laeufe) ---
@@ -339,7 +274,9 @@ rsync_backup() {
   else
     opts+=(--stats)
   fi
-  rsync "${opts[@]}" "${excludes[@]}" "$src" "$dest"
+  # rsync-Output (inkl. Fehlerdetails) ins Log — Exit-Code bleibt erhalten
+  rsync "${opts[@]}" "${excludes[@]}" "$src" "$dest" 2>>"${LOG_FILE:-/dev/null}" | tee -a "${LOG_FILE:-/dev/null}" >/dev/null
+  return ${PIPESTATUS[0]}
 }
 
 # --- Restic-Wrapper (optional zugeschaltet) ---

@@ -14,7 +14,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/common.sh
 source "$SCRIPT_DIR/lib/common.sh"
 
-SERVICES_DIR="${SERVICES_DIR:-$SCRIPT_DIR/services.d}"
 if [[ -f /etc/backup.conf ]]; then
   # shellcheck disable=SC1091
   source /etc/backup.conf
@@ -27,13 +26,13 @@ ALL=false
 if [[ "${1:-}" == "--all" ]]; then ALL=true; fi
 TARGETS=()
 if [[ $ALL == "true" ]]; then
-  local_svc=""
-  for f in "$SERVICES_DIR"/*.env; do
-    local_svc="$(source "$f" 2>/dev/null; [[ "${DB_TYPE:-}" == "postgres" ]] && echo "${SVC_NAME:-$(basename "$f" .env)}" || true)"
-    [[ -n "$local_svc" ]] && TARGETS+=("$local_svc")
-  done
+  while IFS= read -r c; do
+    [[ -z "$c" ]] && continue
+    load_service_env "$c"
+    [[ "${DB_TYPE:-}" == "postgres" ]] && TARGETS+=("$SVC_NAME")
+  done < <(discover_containers)
 else
-  TARGETS=("${1:-litellm}")
+  TARGETS=("${1:-litellm_db}")
 fi
 
 log_info "Restore-Test fuer: ${TARGETS[*]} (Wegwerf-Container, keine Produktiv-DB)"
@@ -58,9 +57,8 @@ done
 
 FAILS=0
 for svc in "${TARGETS[@]}"; do
-  decl="$SERVICES_DIR/$svc.env"
-  [[ -f "$decl" ]] || { log_fail "$svc: keine Deklaration"; ((FAILS+=1)); continue; }
-  load_declaration "$decl"
+  container_exists "$svc" || { log_fail "$svc: Container existiert nicht"; ((FAILS+=1)); continue; }
+  load_service_env "$svc"
   # Neuesten Dump suchen
   base="$BACKUP_ROOT/$SVC_NAME/db"
   dump_dir=""
