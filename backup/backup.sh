@@ -45,7 +45,7 @@ if [[ -f /etc/backup.conf ]]; then
   source /etc/backup.conf
 fi
 
-# Zentrale Policy-Defaults laden (IGNORE_PATH_PREFIXES, DEFAULT_FILE_EXCLUDES, ...)
+# Zentrale Policy-Defaults laden (ALLOW_PATH_PREFIXES, DEFAULT_FILE_EXCLUDES, ...)
 # shellcheck source=../policy.conf
 source "$SCRIPT_DIR/policy.conf"
 POLICY_DIR="${POLICY_DIR:-$SCRIPT_DIR/policies.d}"
@@ -55,7 +55,7 @@ log_init
 _acquire_lock
 log_info "Version ($(version_string))"
 log_info "Dispatcher start: Auto-Discovery, dry-run=$DRY_RUN, Ziel=$BACKUP_ROOT"
-log_info "Policy: IGNORE_PATH_PREFIXES=[${IGNORE_PATH_PREFIXES[*]:-}] DEFAULT_FILE_EXCLUDES=[${DEFAULT_FILE_EXCLUDES[*]:-}]"
+log_info "Policy: ALLOW_PATH_PREFIXES=[${ALLOW_PATH_PREFIXES[*]:-}] DEFAULT_FILE_EXCLUDES=[${DEFAULT_FILE_EXCLUDES[*]:-}]"
 
 if [[ "$DRY_RUN" != "true" ]]; then
   if ! docker_available; then
@@ -80,6 +80,10 @@ STAT_FILES=0
 STAT_BYTES=0
 PARTIALS=0
 WARTENDE_LUECKEN=()
+# Pfad-Dedupe: laufende Container teilen sich Mounts (z.B. /opt/downloads bei
+# arr-stack, ghost-Content bei ghost+activitypub). Jeder Host-Pfad wird nur
+# einmal pro Lauf gesichert — im Kontext des ersten Containers, der ihn meldet.
+declare -A SEEN_PATHS=()
 declare -a RUN_CONTAINERS=()
 
 if [[ "$DRY_RUN" != "true" && ! docker_available ]]; then
@@ -270,7 +274,18 @@ backup_files_for_service() {
   local rc=0 p dest
   dest="$(svc_files_dir "$SVC_NAME")"
   [[ "$DRY_RUN" != "true" ]] && mkdir -p "$dest"
-  for p in "${FILE_PATHS[@]:-}"; do
+  local p2
+  local -a deduped=()
+  for p2 in "${FILE_PATHS[@]:-}"; do
+    [[ -z "$p2" ]] && continue
+    if [[ -n "${SEEN_PATHS[$p2]:-}" ]]; then
+      log_info "$SVC_NAME: Pfad bereits in diesem Lauf gesichert (via ${SEEN_PATHS[$p2]}), ueberspringe: $p2"
+      continue
+    fi
+    deduped+=("$p2")
+    SEEN_PATHS[$p2]="$SVC_NAME"
+  done
+  for p in "${deduped[@]:-}"; do
     [[ -z "$p" ]] && continue
     if [[ ! -e "$p" && "$DRY_RUN" != "true" ]]; then
       log_warn "$SVC_NAME: Quelle fehlt, ueberspringe: $p"; ((rc+=1)); continue
