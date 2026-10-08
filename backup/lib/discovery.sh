@@ -45,14 +45,15 @@ svc_mount_dest_for() {
 }
 
 path_is_ignored() {
-  # True wenn Pfad unter einem ignorierten Praefix liegt (NAS, tmp, OS-Runtime)
+  # True wenn Pfad NICHT unter einem erlaubten Praefix liegt (Allowlist).
+  # Erlaubt ist nur /opt/docker/* — alles andere (NAS /mnt, Download-Staging
+  # /opt/downloads, OS-Runtime, Container-interne Pfade) wird nie gesichert.
   local p="${1:?Pfad fehlt}" pre
-  [[ "$p" == "/" ]] && return 0
-  for pre in "${IGNORE_PATH_PREFIXES[@]:-}"; do
+  for pre in "${ALLOW_PATH_PREFIXES[@]:-}"; do
     [[ -z "$pre" ]] && continue
-    [[ "$p" == "$pre"* ]] && return 0
+    [[ "$p" == "$pre"* || "$p" == "$pre" ]] && return 1
   done
-  return 1
+  return 0
 }
 
 # --- Policy-Overlay: Projekt-Defaults, dann Container-Spezifika ---

@@ -45,7 +45,7 @@ if [[ -f /etc/backup.conf ]]; then
   source /etc/backup.conf
 fi
 
-# Zentrale Policy-Defaults laden (IGNORE_PATH_PREFIXES, DEFAULT_FILE_EXCLUDES, ...)
+# Zentrale Policy-Defaults laden (ALLOW_PATH_PREFIXES, DEFAULT_FILE_EXCLUDES, ...)
 # shellcheck source=../policy.conf
 source "$SCRIPT_DIR/policy.conf"
 POLICY_DIR="${POLICY_DIR:-$SCRIPT_DIR/policies.d}"
@@ -55,7 +55,7 @@ log_init
 _acquire_lock
 log_info "Version ($(version_string))"
 log_info "Dispatcher start: Auto-Discovery, dry-run=$DRY_RUN, Ziel=$BACKUP_ROOT"
-log_info "Policy: IGNORE_PATH_PREFIXES=[${IGNORE_PATH_PREFIXES[*]:-}] DEFAULT_FILE_EXCLUDES=[${DEFAULT_FILE_EXCLUDES[*]:-}]"
+log_info "Policy: ALLOW_PATH_PREFIXES=[${ALLOW_PATH_PREFIXES[*]:-}] DEFAULT_FILE_EXCLUDES=[${DEFAULT_FILE_EXCLUDES[*]:-}]"
 
 if [[ "$DRY_RUN" != "true" ]]; then
   if ! docker_available; then
