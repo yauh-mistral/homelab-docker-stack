@@ -1,4 +1,3 @@
-version: '2.4'
 services:
   shynet-db:
     container_name: ${COMPOSE_PROJECT_NAME}-db
@@ -6,9 +5,9 @@ services:
     restart: always
     environment:
       # Database Credentials
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       # Bind mount for database data persistence
       - ${DB_DATA_PATH}:/var/lib/postgresql/data
@@ -43,7 +42,7 @@ services:
       #- LETSENCRYPT_CHALLENGE=dns
       
       # Database Connection (using the internal Docker network name)
-      - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@shynet-db:5432/${DB_NAME}
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@shynet-db:5432/${POSTGRES_DB}
       
       # Security & Initialization Secrets
       - SECRET_KEY=${SECRET_KEY}
