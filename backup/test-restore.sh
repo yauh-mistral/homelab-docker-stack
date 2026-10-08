@@ -13,6 +13,8 @@ set -o pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/common.sh
 source "$SCRIPT_DIR/lib/common.sh"
+# shellcheck source=lib/discovery.sh
+source "$SCRIPT_DIR/lib/discovery.sh"
 
 if [[ -f /etc/backup.conf ]]; then
   # shellcheck disable=SC1091
@@ -33,6 +35,11 @@ if [[ $ALL == "true" ]]; then
   done < <(discover_containers)
 else
   TARGETS=("${1:-litellm_db}")
+fi
+
+if [[ ${#TARGETS[@]} -eq 0 ]]; then
+  log_fail "Keine Postgres-Services entdeckt — Restore-Test ohne Ziele abgebrochen (kein falsch-positives OK)"
+  exit 1
 fi
 
 log_info "Restore-Test fuer: ${TARGETS[*]} (Wegwerf-Container, keine Produktiv-DB)"
