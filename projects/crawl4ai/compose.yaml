@@ -3,15 +3,11 @@ services:
     container_name: crawl4ai
     image: unclecode/crawl4ai:latest
     restart: unless-stopped
-    shm_size: '2gb'
     environment:
-      - VIRTUAL_HOST=crawl4ai.islasorna.de
+      - VIRTUAL_HOST=crawl4ai.meine-domain.de
       - VIRTUAL_PORT=11235
       - TZ=Europe/Berlin
       - CRAWL4AI_API_TOKEN=${CRAWL4AI_API_TOKEN:-}
-    networks:
-      - searxng
-      - shared_proxy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11235/health"]
       interval: 30s
@@ -19,6 +15,10 @@ services:
       retries: 3
       start_period: 20s
 
+    networks:
+      - searxng
+      - shared_proxy
+    shm_size: '2gb'
 networks:
   searxng:
   shared_proxy:

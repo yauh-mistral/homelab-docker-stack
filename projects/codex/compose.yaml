@@ -1,17 +1,17 @@
 services:
   codex:
-    image: docker.io/ajslater/codex
     container_name: codex
+    image: docker.io/ajslater/codex
+    restart: on-failure
     environment:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
       - VIRTUAL_PORT=9810
-      - VIRTUAL_HOST=codex.islasorna.de
+      - VIRTUAL_HOST=codex.meine-domain.de
     volumes:
       - /opt/docker/codex/config:/config
       - /mnt/media/library/comics:/comics:ro
-    restart: on-failure
     networks:
       - shared_proxy
 

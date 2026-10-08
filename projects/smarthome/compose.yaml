@@ -1,24 +1,18 @@
 services:
 
   homeassistant:
-    image: ghcr.io/home-assistant/home-assistant:stable
     container_name: homeassistant
+    image: ghcr.io/home-assistant/home-assistant:stable
     restart: unless-stopped
     network_mode: host
     privileged: false
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
-      - SYS_ADMIN
-    group_add:
-      - "20" # Matched to your host dialout GID
     security_opt:
       - apparmor:unconfined
     environment:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - VIRTUAL_HOST=hass.islasorna.de
+      - VIRTUAL_HOST=hass.meine-domain.de
       - VIRTUAL_PORT=8123
     volumes:
       - /opt/docker/homeassistant:/config
@@ -29,40 +23,46 @@ services:
       - /dev/bus/usb/003/002:/dev/bus/usb/003/002
       - /dev/serial/by-id/usb-dresden_elektronik_ingenieurtechnik_GmbH_ConBee_II_DE2121030-if00:/dev/ttyACM0
 
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_ADMIN
+    group_add:
+      - "20" # Matched to your host dialout GID
   music-assistant:
-    image: ghcr.io/music-assistant/server:stable
     container_name: music-assistant
+    image: ghcr.io/music-assistant/server:stable
     restart: unless-stopped
     network_mode: host
     privileged: false
-    cap_add:
-      - DAC_READ_SEARCH
     environment:
       - TZ=${TZ}
-      - VIRTUAL_HOST=mass.islasorna.de
+      - VIRTUAL_HOST=mass.meine-domain.de
       - VIRTUAL_PORT=8095
     volumes:
       - /opt/docker/music-assistant:/data
       - /mnt/media/music/lidarr/:/media:ro
 
+    cap_add:
+      - DAC_READ_SEARCH
   mosquitto:
-    image: eclipse-mosquitto:latest
     container_name: mosquitto
+    image: eclipse-mosquitto:latest
     restart: unless-stopped
     privileged: false
-    ports:
-      - "1883:1883" # Exposes MQTT to local LAN (Valetudo) & Host (Home Assistant)
-      - "9001:9001" # WebSockets (Optional)
     environment:
       - TZ=${TZ}
     volumes:
       - /opt/docker/mosquitto/config:/mosquitto/config
       - /opt/docker/mosquitto/log:/mosquitto/log
       - /opt/docker/mosquitto/data:/mosquitto/data
-      
+
+    ports:
+      - "1883:1883" # Exposes MQTT to local LAN (Valetudo) & Host (Home Assistant)
+      - "9001:9001" # WebSockets (Optional)
   matter-server:
-    image: ghcr.io/home-assistant-libs/python-matter-server:stable
     container_name: matter-server
+    image: ghcr.io/home-assistant-libs/python-matter-server:stable
     restart: unless-stopped
     network_mode: host
     privileged: false

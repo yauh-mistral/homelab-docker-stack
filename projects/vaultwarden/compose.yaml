@@ -1,10 +1,23 @@
 services:
   vaultwarden:
-    image: vaultwarden/server:latest
     container_name: vaultwarden
+    image: vaultwarden/server:latest
     restart: unless-stopped
-    env_file:
-      - .env
+    environment:
+      # Vaultwarden erwartet diese ENV-Namen 1:1 (kein env_file mehr noetig)
+      - DOMAIN=${DOMAIN}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_FROM=${SMTP_FROM}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_SECURITY=${SMTP_SECURITY}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_TIMEOUT=${SMTP_TIMEOUT}
+      - SMTP_AUTH_MECHANISM=${SMTP_AUTH_MECHANISM}
+      - SMTP_EXPLICIT_TLS=${SMTP_EXPLICIT_TLS}
+      - SMTP_DEBUG=${SMTP_DEBUG}
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
+      - WEBAUTHN_ENABLED=${WEBAUTHN_ENABLED}
     volumes:
       - /opt/docker/vaultwarden:/data/
     networks:

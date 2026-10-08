@@ -1,10 +1,8 @@
 services:
   crowdsec:
-    image: crowdsecurity/crowdsec:latest
     container_name: crowdsec
+    image: crowdsecurity/crowdsec:latest
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:8929:8080" # LAPI endpoint for local bouncers
     environment:
       - COLLECTIONS=crowdsecurity/nginx crowdsecurity/sshd crowdsecurity/linux
     volumes:
@@ -13,3 +11,5 @@ services:
       - /var/log/auth.log:/var/log/auth.log:ro
       - /var/log/syslog:/var/log/syslog:ro
       - /opt/docker/nginx/logs:/var/log/nginx:ro # Access logs for 80/443
+    ports:
+      - "127.0.0.1:8929:8080" # LAPI endpoint for local bouncers

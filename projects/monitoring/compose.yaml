@@ -41,11 +41,11 @@ services:
     container_name: ${COMPOSE_PROJECT_NAME}-grafana
     image: grafana/grafana-enterprise:latest
     restart: unless-stopped
-    user: "472:472" # Replaced root (user: 0) with default Grafana unprivileged UID/GID
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    user: "472:472" # Replaced root (user: 0) with default Grafana unprivileged UID/GID
     environment:
       - TZ=${TZ}
       - VIRTUAL_HOST=${GRAFANA_HOST}

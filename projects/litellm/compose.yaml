@@ -1,10 +1,8 @@
 services:
   litellm_db:
-    image: postgres:16-alpine
     container_name: litellm_db
+    image: postgres:16-alpine
     restart: unless-stopped
-    networks:
-      - litellm_net
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
@@ -19,20 +17,20 @@ services:
       timeout: 5s
       retries: 5
 
+    networks:
+      - litellm_net
   litellm:
-    image: ghcr.io/berriai/litellm:main-latest
     container_name: litellm
+    image: ghcr.io/berriai/litellm:main-latest
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--detailed_debug"]
     restart: unless-stopped
     depends_on:
       litellm_db:
         condition: service_healthy
-    networks:
-      - litellm_net
-      - shared_proxy
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@litellm_db:5432/${POSTGRES_DB}
       - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
-      - UI_USERNAME=${UI_USERNAME}
+      - UI_USERNAME=${UI_USER}
       - UI_PASSWORD=${UI_PASSWORD}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
@@ -44,7 +42,9 @@ services:
       - /opt/docker/litellm/config.yaml:/app/config.yaml
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-    command: ["--config", "/app/config.yaml", "--port", "4000", "--detailed_debug"]
+    networks:
+      - litellm_net
+      - shared_proxy
 
 networks:
   litellm_net:
