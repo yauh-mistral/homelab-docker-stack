@@ -46,7 +46,7 @@ services:
         DNS_API: dns_desec
         DESEC_TOKEN: ${DESEC_TOKEN}
     volumes:
-      - ${ACME_BASE_PATH}/etc/acme.sh:/etc/acme.sh
+      - ${ACME_BASE_PATH}:/etc/acme.sh
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${NGINX_BASE_PATH}/conf:/etc/nginx/conf.d
       - ${NGINX_BASE_PATH}/vhost:/etc/nginx/vhost.d
