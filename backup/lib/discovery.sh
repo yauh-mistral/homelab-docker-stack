@@ -106,11 +106,18 @@ load_service_env() {
   fi
 
   # --- Datei-Kandidaten: Bind-Mounts, gefiltert ---
-  local src
+  local src bn
   while IFS= read -r src; do
     [[ -z "$src" ]] && continue
     [[ -e "$src" ]] || continue
     path_is_ignored "$src" && continue
+    bn="$(basename "$src")"
+    local skip=false sb
+    for sb in "${SKIP_MOUNT_BASENAMES[@]:-}"; do
+      [[ -z "$sb" ]] && continue
+      [[ "$bn" == "$sb" ]] && skip=true
+    done
+    [[ "$skip" == "true" ]] && continue
     FILE_PATHS+=("$src")
   done < <(svc_mounts "$c")
 

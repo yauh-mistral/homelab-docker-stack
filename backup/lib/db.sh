@@ -129,7 +129,7 @@ dump_forgejo() {
   local dest_dir="$1"
   local out="$dest_dir/${SVC_NAME}-dump.zip"
   if [[ "$DRY_RUN" == "true" ]]; then
-    log_dry "$SVC_NAME: wuerde ausfuehren: docker exec --user git $DB_CONTAINER forgejo dump --skip-repository [${DB_DUMP_EXTRA:-}] -> $out"
+    log_dry "$SVC_NAME: wuerde ausfuehren: docker exec --user git $DB_CONTAINER forgejo dump --skip-repository ${DB_DUMP_EXTRA:+[$DB_DUMP_EXTRA]} -> $out"
     return 0
   fi
   container_running "$DB_CONTAINER" || { log_fail "$SVC_NAME: Forgejo-Container laeuft nicht"; return 1; }
