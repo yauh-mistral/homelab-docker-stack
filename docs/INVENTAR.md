@@ -31,7 +31,6 @@ Das Repository enthält **30 Compose-Stacks** (`projects/`), die zusammen **33 b
 | 10 | codex (codex) | — | `/opt/docker/codex/config`; `/mnt/media/library/comics` (Media, nur lesend, ignoriert) | Comic-Reader | 20M | Config-only |
 | 11 | crawl4ai (crawl4ai) | — | keine persistenten Bind-Mounts | Crawler | — | ignorieren |
 | 12 | 5etools (dnd) | — | `/opt/docker/5etools` (statische Site) | Statische Website | 6.9G (6.8G img) | Config-only (Datei-Rsync-Restic, statisch) |
-| 13 | portainer + dockge (docker-gui) | SQLite in `/data` | `/opt/docker/portainer`, `/opt/docker/dockge/data`, `/opt/docker/stacks` | Docker-Verwaltung | n/a (im Snapshot nicht gelistet) | Config-only (Stop-Fenster) |
 | 14 | firecrawl (firecrawl) | Redis (Queue/Crawl-State) | Named Volume `redis-data` (kein Bind-Mount) | Crawler-API | n/a | ignorieren (Queue-Status reproduzierbar) |
 | 15 | forgejo (forgejo) | SQLite/interne DB in `/data` (Standard-Setup, kein separater DB-Container) | `/opt/docker/forgejo/data` (Repos+DB), `/opt/docker/forgejo/runner` | Git-Hosting + CI | 15G (15G data, 655M runner) | DB-Dump (forgejo dump) + Datei-Rsync-Restic |
 | 16 | ghost (ghost) | MySQL 9 (`ghost-mysql`, `/opt/docker/ghost/mysql`); ActivityPub nutzt dieselbe MySQL-Instanz | `/opt/docker/ghost/ghost` (Content: Images, Themes) | Blog | 671M (411M mysql, 261M content) | DB-Dump (mysqldump beider Schemas) + Datei-Rsync-Restic (content) |
@@ -49,7 +48,6 @@ Das Repository enthält **30 Compose-Stacks** (`projects/`), die zusammen **33 b
 | 28 | n8n (n8n) | PostgreSQL 16 (`n8n-db`, `/opt/docker/n8n/postgres`) | `/opt/docker/n8n/data` (`.n8n`-Ordner mit Encryption-Key!) | Workflow-Automation | n/a | DB-Dump (pg_dump) + Datei-Rsync-Restic (.n8n) |
 | 29 | omada-controller (network) | — (interne DB in `data`) | `/opt/docker/omada/data`, `/opt/docker/omada/work` | Netzwerk-Controller | 391M (123M data) | Config-only (Stop-Fenster) |
 | 30 | node-red (node-red) | — (Flows in JSON-Dateien in `/data`) | `/opt/docker/node-red` | Flow-Editor | n/a | Config-only (Datei-Rsync-Restic) |
-| 31 | open-notebook (open-notebook) | SurrealDB (`surrealdb`, `/opt/docker/open-notebook/surreal`) | `/opt/docker/open-notebook/surreal`, `/opt/docker/open-notebook/data` | Notebook-LLM | n/a | DB-Dump (surreal export) + Datei-Rsync-Restic |
 | 32 | opencloud (opencloud) | — (kein DB-Server; Metadaten im Dateisystem, inkl. BoltDB in `/var/lib/opencloud`) | `/mnt/opencloud` (OC_DATA_DIR — Dateien+Metadaten), `/opt/docker/opencloud` (Config mit Secrets!) | Cloud-Storage | n/a (NAS) | Datei-Rsync-Restic (/mnt/opencloud) + Config-only (/etc-Konfig); Hersteller empfiehlt Stop-Fenster |
 | 33 | paperless (paperless) | PostgreSQL 15 (`paperless-db`, `${DOCKER_DATA_PATH}/paperless/db`); Redis (Broker, Cache) | `${NAS_DATA_PATH}/data`, `${NAS_DATA_PATH}/media`, `${NAS_DATA_PATH}/export` (= `/mnt/paperless/*`); `/opt/docker/paperless-ai` | DMS | n/a (NAS) | DB-Dump (pg_dump) + Datei-Rsync-Restic (data+media) + document_exporter optional |
 | 34 | searxng (searxng) | Valkey/Redis (Cache) | `/opt/docker/searxng/etc` (Config), `/opt/docker/searxng/data` (Cache) | Meta-Suchmaschine | 204K | Config-only (etc); data ignorieren |
@@ -57,7 +55,6 @@ Das Repository enthält **30 Compose-Stacks** (`projects/`), die zusammen **33 b
 | 36 | music-assistant (smarthome) | SQLite (`library.db`, `auth.db` in `/data`) | `/opt/docker/music-assistant` | Musik-Server | 1.3G (215M library.db) | Config-only (Stop-Fenster) |
 | 37 | mosquitto (smarthome) | — | `/opt/docker/mosquitto/config`, `/opt/docker/mosquitto/data` (Retained Messages) | MQTT-Broker | 4.6M | Config-only |
 | 38 | matter-server (smarthome) | — (SQLite/Matter-State in `/data`) | `/opt/docker/python-matter-server/data` | Matter-Bridge | 2.0M | Config-only (Stop-Fenster) |
-| 39 | sparkyfitness (sparkyfitness) | PostgreSQL 18 (`sparkyfitness-db`, `/opt/docker/sparkyfitness/postgresql`) | `/opt/docker/sparkyfitness/backup`, `/opt/docker/sparkyfitness/uploads` | Fitness-Tracker | n/a | DB-Dump (pg_dump) + Datei-Rsync-Restic (uploads) |
 | 40 | tdarr (tdarr) | — (Library-DB in `/app/server`) | `/opt/docker/tdarr/server`, `/opt/docker/tdarr/configs`; `/mnt/media/video` (Media, ignoriert), `/mnt/media/cache` (Temp, ignoriert) | Transcoder | 1.2G (2.2G server) | Config-only (Stop-Fenster) |
 | 41 | vaultwarden (vaultwarden) | SQLite (`db.sqlite3` in `/data`, WAL-Modus!) | `/opt/docker/vaultwarden` (attachments, sends, rsa_key.pem, db.sqlite3) | Passwort-Manager | 5.2M | DB-Dump (sqlite3 .backup) + Datei-Rsync-Restic (attachments, sends, rsa_key) |
 | 42 | wanderer (wanderer) | PocketBase (`flomp/wanderer-db`, `/opt/docker/wanderer/db`); Meilisearch (`search`, `/opt/docker/wanderer/search` — rekonstruierbar) | `/opt/docker/wanderer/db`, `/opt/docker/wanderer/uploads`, `/opt/docker/wanderer/plugins` | Wander-Plattform | 354M (347M db) | Datei-Rsync-Restic (db mit Stop-Fenster, uploads, plugins); search ignorieren |
@@ -69,7 +66,4 @@ Der Host-Snapshot zeigt weitere Verzeichnisse unter `/opt/docker/`, die **nicht*
 
 ## Zusammenfassung Kategorien
 
-- **DB-Dump**: shynet, castopod, forgejo, ghost, immich, litellm, n8n, open-notebook, paperless, sparkyfitness, vaultwarden (SQLite-dump), monitoring-kuma (SQLite)
-- **Datei-Rsync-Restic**: shynet (data), castopod (app/media), immich (/mnt/immich), opencloud (/mnt/opencloud), paperless (data+media), sparkyfitness (uploads), n8n (.n8n), forgejo (data/repos), ghost (content), wanderer (db+uploads), vaultwarden (attachments+sends), 5etools, node-red
-- **Config-only**: alle arr-Services, sabnzbd, overseerr, codex, crowdsec, homepage, mealie, plex, tautulli, audiobookshelf, calibre-web, kuma, grafana, omada, homeassistant, music-assistant, mosquitto, matter-server, tdarr, searxng, web-proxy (nginx/acme), docker-gui
 - **ignorieren**: crawl4ai, firecrawl, metube (Zielverzeichnisse), Media-Libraries (`/mnt/media/**`), Downloads (`/opt/downloads`), Logs, Caches (tautulli/cache, searxng/data, MediaCover optional), Redis/Valkey-Caches, dashdot, Meilisearch-Index (wanderer/search)

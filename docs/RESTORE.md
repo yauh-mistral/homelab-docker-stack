@@ -7,7 +7,7 @@ Liste der Services: `backup/backup.sh --list`. Backup-Stände: `/mnt/systems/bac
 
 ## Kategorie: DB-Dump (postgres / mysql / mariadb)
 
-Services: analytics, castopod, ghost, immich, litellm, n8n, paperless, sparkyfitness
+Services: analytics, castopod, ghost, immich, litellm, n8n, paperless
 
 1. Service-Stack ggf. stoppen (App-Container, NICHT die DB): `docker stop <app-container>` — sonst schreiben Apps während des Restores.
 2. `backup/restore.sh <service> --db-only`
@@ -36,7 +36,7 @@ Hersteller-Prozedur (Vaultwarden-Wiki):
 
 ## Kategorie: Datei-Rsync-Restic (und config_only mit Stop-Fenster)
 
-Services: immich (files), castopod (media), opencloud, paperless (files), n8n (.n8n), sparkyfitness (uploads), vaultwarden (attachments/sends), wanderer, forgejo (repos), ghost (content) sowie alle config_only-Services.
+Services: immich (files), castopod (media), opencloud, paperless (files), n8n (.n8n), vaultwarden (attachments/sends), wanderer, forgejo (repos), ghost (content) sowie alle config_only-Services.
 
 1. `backup/restore.sh <service> --files-only [--date ...]`
    - Das Skript öffnet automatisch das Stop-Fenster (deklarierte `STOP_CONTAINERS`), rsynct die Dateien zurück und startet die Container wieder.
