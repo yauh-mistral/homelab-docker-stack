@@ -13,7 +13,7 @@ Stand: 2026-10-08 (Quellen: `projects/*/compose.yaml`, `projects/*/.env.example`
 
 ## Wichtig: Anzahl der Services
 
-Das Repository enthält **18 Compose-Stacks** (`projects/`), die zusammen **33 backup-relevante Services** ergeben (plus Hilfscontainer). Die Zuordnung „33 Services" wird wie folgt gebildet: die 30 Stacks, wobei `arr-stack` zu 7 eigenständigen Services (sonarr, lidarr, bazarr, radarr, prowlarr, sabnzbd, overseerr), `smarthome` zu 4 Services (homeassistant, music-assistant, mosquitto, matter-server) und `media` zu 7 Services (plex, tautulli, audiobookshelf, metube, calibre-web, codex, tdarr), `content` zu 2 Services (homepage, 5etools), `infra` zu 2 Services (omada-controller, crowdsec), `ai` zu 4 Services (litellm, crawl4ai, valkey, searxng) und `monitoring` zu 5 Services (dashdot, uptime-kuma, grafana, shynet-db, shynet-server) aufgeteilt wird; reine Netzwerk/Proxy-Helper (cert-Container) werden nicht als eigener Service gezählt. Details und Annahmen: siehe `docs/QUESTIONS.md`.
+Das Repository enthält **18 Compose-Stacks** (`projects/`), die zusammen **33 backup-relevante Services** ergeben (plus Hilfscontainer). Die Zuordnung „33 Services" wird wie folgt gebildet: die 30 Stacks, wobei `arr-stack` zu 7 eigenständigen Services (sonarr, lidarr, bazarr, radarr, prowlarr, sabnzbd, overseerr), `smarthome` zu 4 Services (homeassistant, music-assistant, mosquitto, matter-server) und `media` zu 7 Services (plex, tautulli, audiobookshelf, metube, calibre-web, codex, tdarr), `content` zu 2 Services (homepage, 5etools), `infra` zu 2 Services (omada-controller, crowdsec), `local-ai` zu 4 Services (litellm, crawl4ai, valkey, searxng) und `monitoring` zu 5 Services (dashdot, uptime-kuma, grafana, shynet-db, shynet-server) aufgeteilt wird; reine Netzwerk/Proxy-Helper (cert-Container) werden nicht als eigener Service gezählt. Details und Annahmen: siehe `docs/QUESTIONS.md`.
 
 ## Inventartabelle
 
@@ -29,7 +29,7 @@ Das Repository enthält **18 Compose-Stacks** (`projects/`), die zusammen **33 b
 | 8 | overseerr (arr-stack) | SQLite in `/app/config` | `/opt/docker/overseerr` | Request-Manager | 8.3M | Config-only (Stop-Fenster) |
 | 9 | castopod (castopod) | MariaDB 11.2 (`castopod_mariadb`, `/opt/docker/castopod/mariadb`); Redis (Cache) | `/opt/docker/castopod/app/media` (Podcast-Media), `/opt/docker/castopod/redis` (Cache) | Podcast-Plattform | 2.3G (2.2G app, 167M mariadb) | DB-Dump + Datei-Rsync-Restic (app/media) |
 | 10 | codex (media) | — | `/opt/docker/codex/config`; `/mnt/media/library/comics` (Media, nur lesend, ignoriert) | Comic-Reader | 20M | Config-only |
-| 11 | crawl4ai (ai) | — | keine persistenten Bind-Mounts | Crawler | — | ignorieren |
+| 11 | crawl4ai (local-ai) | — | keine persistenten Bind-Mounts | Crawler | — | ignorieren |
 | 12 | 5etools (content) | — | `/opt/docker/5etools` (statische Site) | Statische Website | 6.9G (6.8G img) | Config-only (Datei-Rsync-Restic, statisch) |
 | 14 | firecrawl (firecrawl) | Redis (Queue/Crawl-State) | Named Volume `redis-data` (kein Bind-Mount) | Crawler-API | n/a | ignorieren (Queue-Status reproduzierbar) |
 | 15 | forgejo (forgejo) | SQLite/interne DB in `/data` (Standard-Setup, kein separater DB-Container) | `/opt/docker/forgejo/data` (Repos+DB), `/opt/docker/forgejo/runner` | Git-Hosting + CI | 15G (15G data, 655M runner) | DB-Dump (forgejo dump) + Datei-Rsync-Restic |
@@ -37,7 +37,7 @@ Das Repository enthält **18 Compose-Stacks** (`projects/`), die zusammen **33 b
 | 17 | crowdsec (infra) | SQLite intern (`/var/lib/crowdsec/data`) | `/opt/docker/crowdsec/config`, `/opt/docker/crowdsec/data` | IPS/IDS | 37M | Config-only |
 | 18 | homepage (content) | — | `/opt/docker/homepage` (YAML-Konfiguration) | Dashboard | 68K | Config-only |
 | 19 | immich (immich) | PostgreSQL 14 (`immich_postgres`, `/opt/docker/immich/postgres`) | `/mnt/immich` (UPLOAD_LOCATION — Fotos/Videos) | Foto-Management | n/a (NAS-Pfad; DB-dir 8K) | DB-Dump (pg_dump) + Datei-Rsync-Restic (/mnt/immich) |
-| 20 | litellm (ai) | PostgreSQL 16 (`litellm_db`, `/opt/docker/litellm/postgres_data`) | `/opt/docker/litellm/config.yaml` (Config-Datei) | LLM-Proxy | 12K | DB-Dump + Config-only |
+| 20 | litellm (local-ai) | PostgreSQL 16 (`litellm_db`, `/opt/docker/litellm/postgres_data`) | `/opt/docker/litellm/config.yaml` (Config-Datei) | LLM-Proxy | 12K | DB-Dump + Config-only |
 | 22 | plex (media) | — (DBs in `/config`) | `/opt/docker/plex/conf`; `/mnt/media/**` (Media, ignoriert) | Mediaserver | 53G (conf) | Config-only |
 | 23 | tautulli (media) | SQLite (`tautulli.db` in `/config`) | `/opt/docker/tautulli`; `/mnt/media/**` (ignoriert) | Plex-Stats | 1.1G (897M cache!) | Config-only (Stop-Fenster; cache ausschließen) |
 | 24 | audiobookshelf (media) | SQLite in `/config` | `/opt/docker/audiobookshelf/config`, `/opt/docker/audiobookshelf/metadata`; `/mnt/media/audiobooks` (Media, ignoriert) | Hörbuch-Server | 45G (45G metadata!) | Config-only (Stop-Fenster) — metadata prüfen (siehe QUESTIONS) |
@@ -49,7 +49,7 @@ Das Repository enthält **18 Compose-Stacks** (`projects/`), die zusammen **33 b
 | 30 | node-red (node-red) | — (Flows in JSON-Dateien in `/data`) | `/opt/docker/node-red` | Flow-Editor | n/a | Config-only (Datei-Rsync-Restic) |
 | 32 | opencloud (opencloud) | — (kein DB-Server; Metadaten im Dateisystem, inkl. BoltDB in `/var/lib/opencloud`) | `/mnt/opencloud` (OC_DATA_DIR — Dateien+Metadaten), `/opt/docker/opencloud` (Config mit Secrets!) | Cloud-Storage | n/a (NAS) | Datei-Rsync-Restic (/mnt/opencloud) + Config-only (/etc-Konfig); Hersteller empfiehlt Stop-Fenster |
 | 33 | paperless (paperless) | PostgreSQL 15 (`paperless-db`, `${DOCKER_DATA_PATH}/paperless/db`); Redis (Broker, Cache) | `${NAS_DATA_PATH}/data`, `${NAS_DATA_PATH}/media`, `${NAS_DATA_PATH}/export` (= `/mnt/paperless/*`); `/opt/docker/paperless-ai` | DMS | n/a (NAS) | DB-Dump (pg_dump) + Datei-Rsync-Restic (data+media) + document_exporter optional |
-| 34 | searxng (ai) | Valkey/Redis (Cache) | `/opt/docker/searxng/etc` (Config), `/opt/docker/searxng/data` (Cache) | Meta-Suchmaschine | 204K | Config-only (etc); data ignorieren |
+| 34 | searxng (local-ai) | Valkey/Redis (Cache) | `/opt/docker/searxng/etc` (Config), `/opt/docker/searxng/data` (Cache) | Meta-Suchmaschine | 204K | Config-only (etc); data ignorieren |
 | 35 | homeassistant (smarthome) | SQLite (`home-assistant_v2.db`, `zigbee.db` in `/config`) | `/opt/docker/homeassistant` (Config inkl. YAML + SQLite) | Smart Home | 766M (671M DB) | Config-only (Stop-Fenster) — YAML-Konfig ist der eigentliche Schatz, DB groß |
 | 36 | music-assistant (smarthome) | SQLite (`library.db`, `auth.db` in `/data`) | `/opt/docker/music-assistant` | Musik-Server | 1.3G (215M library.db) | Config-only (Stop-Fenster) |
 | 37 | mosquitto (smarthome) | — | `/opt/docker/mosquitto/config`, `/opt/docker/mosquitto/data` (Retained Messages) | MQTT-Broker | 4.6M | Config-only |
