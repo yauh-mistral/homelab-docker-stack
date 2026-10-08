@@ -18,13 +18,18 @@ set -o pipefail
 # MAJOR=Breaking Changes (Config/Deklarationsformat/CLI).
 # INSTALL_STAMP wird von install.sh mit Installationszeitpunkt versehen
 # (Format: "YYYY-MM-DD HH:MM"), damit Logs erkennen lassen, welcher Stand lief.
+# SCRIPT_BUILD ist die Nummer des GitHub-PRs, der den Stand geliefert hat —
+# beim Merge ergaenzt, damit Logs eindeutig dem Patch-Level (PR) zuordenbar sind.
 SCRIPT_VERSION="v1.0.0"
+SCRIPT_BUILD="${SCRIPT_BUILD:-37}"
 INSTALL_STAMP="${INSTALL_STAMP:-not-installed}"
 version_string() {
+  local v="$SCRIPT_VERSION"
+  [[ -n "$SCRIPT_BUILD" ]] && v+="+#${SCRIPT_BUILD}"
   if [[ "$INSTALL_STAMP" == "not-installed" ]]; then
-    echo "$SCRIPT_VERSION (uninstalled repo copy)"
+    echo "$v (uninstalled repo copy)"
   else
-    echo "$SCRIPT_VERSION $INSTALL_STAMP"
+    echo "$v $INSTALL_STAMP"
   fi
 }
 

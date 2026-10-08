@@ -1,0 +1,53 @@
+# build-number.yml — SCRIPT_BUILD (PR-Nummer) automatisch nachtragen
+# Beim Push auf main wird die PR-Nummer aus dem Merge-Commit-Subject "(#N)"
+# gelesen. Weicht sie von SCRIPT_BUILD in backup/lib/common.sh ab, wird die
+# Datei aktualisiert und direkt auf main committet. Damit zeigt jedes
+# Backup-/Restore-Log eindeutig den PR-Stand (v1.0.0+#<PR>).
+name: build-number
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  stamp-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repo auschecken
+        uses: actions/checkout@v4
+        with:
+          # Volle Historie, damit das Merge-Commit-Subject lesbar ist
+          fetch-depth: 0
+
+      - name: PR-Nummer aus Merge-Commit ermitteln
+        id: pr
+        run: |
+          SUBJECT="$(git log -1 --format='%s' "$GITHUB_SHA")"
+          PR_NUM="$(printf '%s' "$SUBJECT" | sed -n 's/.*(#\([0-9][0-9]*\))$/\1/p')"
+          if [[ -z "$PR_NUM" ]]; then
+            echo "Keine PR-Nummer im Commit-Subject gefunden — kein Update noetig."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "PR-Nummer: #$PR_NUM"
+          echo "pr=$PR_NUM" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: SCRIPT_BUILD vergleichen und ggf. committen
+        if: steps.pr.outputs.skip != 'true'
+        run: |
+          PR_NUM="${{ steps.pr.outputs.pr }}"
+          CURRENT="$(grep -m1 '^SCRIPT_BUILD=' backup/lib/common.sh | cut -d= -f2 | tr -d '\"')"
+          echo "Aktuell: '$CURRENT' / Merge: '$PR_NUM'"
+          if [[ "$CURRENT" == "$PR_NUM" ]]; then
+            echo "SCRIPT_BUILD ist bereits #$PR_NUM — nichts zu tun."
+            exit 0
+          fi
+          sed -i "s|^SCRIPT_BUILD=.*|SCRIPT_BUILD=\"$PR_NUM\"|" backup/lib/common.sh
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backup/lib/common.sh
+          git commit -m "chore: SCRIPT_BUILD=#$PR_NUM (automatisch von build-number Workflow)"
+          git push
