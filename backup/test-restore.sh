@@ -20,6 +20,9 @@ if [[ -f /etc/backup.conf ]]; then
   # shellcheck disable=SC1091
   source /etc/backup.conf
 fi
+
+log_info "Version ($(version_string))"
+
 TEST_IMAGE="${TEST_IMAGE:-postgres:16-alpine}"
 TESTNET="backup-restore-test"
 TEST_PG_NAME="backup-restore-test-pg"
@@ -43,6 +46,16 @@ if [[ ${#TARGETS[@]} -eq 0 ]]; then
 fi
 
 log_info "Restore-Test fuer: ${TARGETS[*]} (Wegwerf-Container, keine Produktiv-DB)"
+
+# Cleanup-Trap: Test-Container und -Netzwerk auch bei Abbruch/Fehler entfernen,
+# damit der Wegwerf-Postgres nie als laufender Container uebrig bleibt (wuerde
+# sonst von der Auto-Discovery als Service gesichert).
+cleanup_test() {
+  docker rm -f "$TEST_PG_NAME" >/dev/null 2>&1
+  docker network rm "$TESTNET" >/dev/null 2>&1 || true
+}
+trap cleanup_test EXIT
+
 
 # Docker-Netzwerk und Wegwerf-Postgres
 if ! docker network inspect "$TESTNET" >/dev/null 2>&1; then
