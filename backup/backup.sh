@@ -212,7 +212,13 @@ backup_one_service() {
       if [[ "$skip_files" == "true" ]]; then
         log_warn "$SVC_NAME: Datei-Backup uebersprungen — Teil-Backup"
       else
-        local do_stop=false
+        DEDUPED_ALL=false
+        dedupe_paths
+        if [[ ${#DEDUPED_PATHS[@]} -eq 0 ]]; then
+          DEDUPED_ALL=true
+          log_info "$SVC_NAME: alle Datei-Pfade bereits in diesem Lauf gesichert — Datei-Backup uebersprungen"
+        else
+          local do_stop=false
         if [[ ${#STOP_CONTAINERS[@]} -gt 0 ]]; then do_stop=true; fi
         if [[ "$do_stop" == "true" ]]; then
           if ! stop_containers "${STOP_CONTAINERS[@]}"; then
@@ -224,6 +230,7 @@ backup_one_service() {
           fi
         else
           if ! backup_files_for_service; then ((rc+=1)); fi
+        fi
         fi
       fi
       ;;
@@ -257,7 +264,7 @@ consistency_check_service() {
   esac
   case "$SVC_CATEGORY" in
     files_only|db_and_files)
-      if [[ "$skip_files" != "true" ]]; then
+      if [[ "$skip_files" != "true" && "${DEDUPED_ALL:-false}" != "true" ]]; then
         dest="$BACKUP_ROOT/$SVC_NAME/files/v.0"
         if [[ ! -d "$dest" ]]; then
           log_warn "Consistency: $SVC_NAME: kein Datei-Stand in $dest"; problems=1
@@ -270,22 +277,25 @@ consistency_check_service() {
   return $problems
 }
 
+dedupe_paths() {
+  DEDUPED_PATHS=()
+  local p
+  for p in "${FILE_PATHS[@]:-}"; do
+    [[ -z "$p" ]] && continue
+    if [[ -n "${SEEN_PATHS[$p]:-}" ]]; then
+      log_info "$SVC_NAME: Pfad bereits in diesem Lauf gesichert (via ${SEEN_PATHS[$p]}), ueberspringe: $p"
+      continue
+    fi
+    DEDUPED_PATHS+=("$p")
+    SEEN_PATHS[$p]="$SVC_NAME"
+  done
+}
+
 backup_files_for_service() {
   local rc=0 p dest
   dest="$(svc_files_dir "$SVC_NAME")"
   [[ "$DRY_RUN" != "true" ]] && mkdir -p "$dest"
-  local p2
-  local -a deduped=()
-  for p2 in "${FILE_PATHS[@]:-}"; do
-    [[ -z "$p2" ]] && continue
-    if [[ -n "${SEEN_PATHS[$p2]:-}" ]]; then
-      log_info "$SVC_NAME: Pfad bereits in diesem Lauf gesichert (via ${SEEN_PATHS[$p2]}), ueberspringe: $p2"
-      continue
-    fi
-    deduped+=("$p2")
-    SEEN_PATHS[$p2]="$SVC_NAME"
-  done
-  for p in "${deduped[@]:-}"; do
+  for p in "${DEDUPED_PATHS[@]:-}"; do
     [[ -z "$p" ]] && continue
     if [[ ! -e "$p" && "$DRY_RUN" != "true" ]]; then
       log_warn "$SVC_NAME: Quelle fehlt, ueberspringe: $p"; ((rc+=1)); continue
