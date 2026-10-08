@@ -25,10 +25,9 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-
     networks:
-      - proxy_net
       - shared_proxy
+
   acme-companion:
     container_name: ${COMPOSE_PROJECT_NAME}-acme
     image: nginxproxy/acme-companion
@@ -58,13 +57,16 @@ services:
       timeout: 5s
       retries: 5
       start_period: 45s
-
-  # Wildcard certificate requesters (separated per domain family)
     networks:
-      - proxy_net
       - shared_proxy
-  cert-meine-domain-1:
-    container_name: cert-meine-domain-1
+
+  # Wildcard-Zertifikat: ein Dummy-Container, alle Domain-Familien in einer
+  # Variable. Der VIRTUAL_HOST ist ein reiner Routing-Platzhalter (bewusst
+  # hardcoded, gehoert zur Compose-Struktur). Fuer mehrere getrennte
+  # Domain-Familien kann dieser Block dupliziert werden (eigener Container
+  # + eigene WILDCARD_DOMAINS-Variable je Familie).
+  cert-dummy:
+    container_name: cert-dummy
     image: alpine
     command: ["sh", "-c", "sleep infinity"]
     restart: unless-stopped
@@ -72,89 +74,14 @@ services:
       acme-companion:
         condition: service_started
     environment:
-      - VIRTUAL_HOST=${CERT_DUMMY_HOST}
+      - VIRTUAL_HOST=cert-dummy.local
       - LETSENCRYPT_HOST=${WILDCARD_DOMAINS}
       - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
     networks:
       - shared_proxy
 
-  cert-meine-domain-2:
-    container_name: cert-meine-domain-2
-    image: alpine
-    command: ["sh", "-c", "sleep infinity"]
-    restart: unless-stopped
-    depends_on:
-      acme-companion:
-        condition: service_started
-    environment:
-      - VIRTUAL_HOST=${CERT_DUMMY_HOST}
-      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS}
-      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
-    networks:
-      - shared_proxy
-
-  cert-meine-domain-3:
-    container_name: cert-meine-domain-3
-    image: alpine
-    command: ["sh", "-c", "sleep infinity"]
-    restart: unless-stopped
-    depends_on:
-      acme-companion:
-        condition: service_started
-    environment:
-      - VIRTUAL_HOST=${CERT_DUMMY_HOST}
-      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS}
-      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
-    networks:
-      - shared_proxy
-
-  cert-meine-domain-6:
-    container_name: cert-meine-domain-6
-    image: alpine
-    command: ["sh", "-c", "sleep infinity"]
-    restart: unless-stopped
-    depends_on:
-      acme-companion:
-        condition: service_started
-    environment:
-      - VIRTUAL_HOST=${CERT_DUMMY_HOST}
-      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS}
-      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
-    networks:
-      - shared_proxy
-
-  cert-meine-domain-4:
-    container_name: cert-meine-domain-4
-    image: alpine
-    command: ["sh", "-c", "sleep infinity"]
-    restart: unless-stopped
-    depends_on:
-      acme-companion:
-        condition: service_started
-    environment:
-      - VIRTUAL_HOST=${CERT_DUMMY_HOST}
-      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS}
-      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
-    networks:
-      - shared_proxy
-
-  cert-meine-domain-5:
-    container_name: cert-meine-domain-5
-    image: alpine
-    command: ["sh", "-c", "sleep infinity"]
-    restart: unless-stopped
-    depends_on:
-      acme-companion:
-        condition: service_started
-    environment:
-      - VIRTUAL_HOST=${CERT_DUMMY_HOST}
-      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS}
-      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
-    networks:
-      - shared_proxy
-
-  yauh:
-    container_name: yauh
+  main-site:
+    container_name: main-site
     image: nginx:alpine
     restart: unless-stopped
     environment:
@@ -168,7 +95,5 @@ services:
       - shared_proxy
 
 networks:
-  proxy_net:
-    driver: bridge
   shared_proxy:
     external: true
