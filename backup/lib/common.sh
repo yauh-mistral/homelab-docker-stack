@@ -14,6 +14,21 @@ set -o pipefail
 # STACKS_DIR:   Quelle der Compose-Stacks und deren .env-Dateien (z.B. /opt/docker/arcane/projects)
 #               Deklarationen koennen den Platzhalter %STACKS_DIR% nutzen.
 # SERVICES_DIR: Heimat der Service-Deklarationen (Default: neben diesem Skript)
+# --- Versionierung (Semantic Versioning) ---
+# Skript-Version des Backup-Systems. PATCH=Fixes, MINOR=Features,
+# MAJOR=Breaking Changes (Config/Deklarationsformat/CLI).
+# INSTALL_STAMP wird von install.sh mit Installationszeitpunkt versehen
+# (Format: "YYYY-MM-DD HH:MM"), damit Logs erkennen lassen, welcher Stand lief.
+SCRIPT_VERSION="v0.0.1"
+INSTALL_STAMP="${INSTALL_STAMP:-not-installed}"
+version_string() {
+  if [[ "$INSTALL_STAMP" == "not-installed" ]]; then
+    echo "$SCRIPT_VERSION (uninstalled repo copy)"
+  else
+    echo "$SCRIPT_VERSION $INSTALL_STAMP"
+  fi
+}
+
 BACKUP_ROOT="${BACKUP_ROOT:-/mnt/systems/backups/ovi}"
 RESTIC_ROOT="${RESTIC_ROOT:-/mnt/systems/backups/ovi/restic}"
 STACKS_DIR="${STACKS_DIR:-}"
@@ -42,6 +57,7 @@ log_init() {
   mkdir -p "$dir"
   LOG_FILE="$dir/${_TIMESTAMP}.log"
   : > "$LOG_FILE"
+  echo "=== Version ($(version_string)) ===" >> "$LOG_FILE"
   echo "=== Backup-Lauf $_TIMESTAMP (host: $(hostname)) ===" >> "$LOG_FILE"
 }
 

@@ -11,6 +11,10 @@ set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Version zum Installationszeitpunkt aus lib/common.sh uebernehmen
+LIB_VERSION="$(grep -m1 '^SCRIPT_VERSION=' "$SCRIPT_DIR/lib/common.sh" | cut -d= -f2 | tr -d '"')"
+INSTALL_STAMP="$(date '+%Y-%m-%d %H:%M')"
+
 INSTALL_HOME="/opt/docker/backup"
 STACKS_DIR="/opt/docker/arcane/projects"
 BACKUP_ROOT="/mnt/systems/ovi/backup"
@@ -70,7 +74,12 @@ copy_file "$SCRIPT_DIR/test-restore.sh" "$INSTALL_HOME/"
 copy_tree "$SCRIPT_DIR/lib" "$INSTALL_HOME/lib"
 copy_tree "$SCRIPT_DIR/services.d" "$INSTALL_HOME/services.d"
 chmod +x "$INSTALL_HOME"/*.sh
-echo "Kopiert: backup.sh, restore.sh, test-restore.sh, lib/, services.d/ -> $INSTALL_HOME"
+
+# Installationszeitpunkt in die installierte Kopie von lib/common.sh schreiben,
+# damit jedes Backup-/Restore-Log die Version + Install-Zeit ausweist.
+sed -i "s|^INSTALL_STAMP=\"\${INSTALL_STAMP:-.*}\"|INSTALL_STAMP=\"$INSTALL_STAMP\"|" \
+  "$INSTALL_HOME/lib/common.sh" || true
+echo "Kopiert: backup.sh, restore.sh, test-restore.sh, lib/, services.d/ -> $INSTALL_HOME (Version $LIB_VERSION, installiert $INSTALL_STAMP)"
 
 # --- Konfiguration schreiben (vorhandene nicht ueberschreiben, nur ergaenzen) ---
 if [[ -f "$CONF_FILE" ]]; then
