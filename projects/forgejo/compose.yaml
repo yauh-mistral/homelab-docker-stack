@@ -4,18 +4,18 @@ services:
     image: codeberg.org/forgejo/forgejo:16
     restart: unless-stopped
     environment:
-      - USER_UID=1000
-      - USER_GID=1000
-      - FORGEJO__database__DB_TYPE=sqlite3
-      - FORGEJO__server__DOMAIN=git.meine-domain.de
-      - FORGEJO__server__ROOT_URL=https://git.meine-domain.de
-      - FORGEJO__actions__ENABLED=true
-      - FORGEJO__service__DISABLE_REGISTRATION=true
-      - FORGEJO__server__LOCAL_ROOT_URL=http://forgejo:3000
-      - VIRTUAL_HOST=git.meine-domain.de
-      - VIRTUAL_PORT=3000
-      - FORGEJO__server__SSH_PORT=222         # The port displayed in the Web UI
-      - FORGEJO__server__SSH_LISTEN_PORT=22   #
+      - USER_UID=${PUID}
+      - USER_GID=${PGID}
+      - FORGEJO__database__DB_TYPE=${FORGEJO_DB_TYPE}
+      - FORGEJO__server__DOMAIN=${FORGEJO_DOMAIN}
+      - FORGEJO__server__ROOT_URL=${FORGEJO_ROOT_URL}
+      - FORGEJO__actions__ENABLED=${FORGEJO_ACTIONS_ENABLED}
+      - FORGEJO__service__DISABLE_REGISTRATION=${FORGEJO_DISABLE_REGISTRATION}
+      - FORGEJO__server__LOCAL_ROOT_URL=${FORGEJO_LOCAL_ROOT_URL}
+      - VIRTUAL_HOST=${FORGEJO_DOMAIN}
+      - VIRTUAL_PORT=${FORGEJO_PORT}
+      - FORGEJO__server__SSH_PORT=${FORGEJO_SSH_PORT}         # The port displayed in the Web UI
+      - FORGEJO__server__SSH_LISTEN_PORT=${FORGEJO_SSH_LISTEN_PORT}   #
     volumes:
       - /opt/docker/forgejo/data:/data
       - /var/run/docker.sock:/var/run/docker.sock
@@ -40,8 +40,8 @@ services:
     environment:
       - FORGEJO_INSTANCE_URL=http://forgejo:3000
       - FORGEJO_RUNNER_REGISTRATION_TOKEN=${FORGEJO_TOKEN}
-      - FORGEJO_RUNNER_NAME=docker-runner
-      - FORGEJO_RUNNER_LABELS=docker:docker://node:20,ubuntu-latest:docker://node:20
+      - FORGEJO_RUNNER_NAME=${FORGEJO_RUNNER_NAME}
+      - FORGEJO_RUNNER_LABELS=${FORGEJO_RUNNER_LABELS}
     volumes:
       - /opt/docker/forgejo/runner:/data
       - /var/run/docker.sock:/var/run/docker.sock

@@ -15,7 +15,7 @@ services:
       CP_BASEURL: ${CP_BASEURL}
       CP_ANALYTICS_SALT: ${CP_ANALYTICS_SALT}
       CP_CACHE_HANDLER: ${CP_CACHE_HANDLER}
-      CP_DATABASE_HOSTNAME: mariadb
+      CP_DATABASE_HOSTNAME: ${MARIADB_HOST}
       CP_DATABASE_NAME: ${MARIADB_DATABASE}
       CP_DATABASE_USERNAME: ${MARIADB_USER}
       CP_DATABASE_PASSWORD: ${MARIADB_PASSWORD}
@@ -32,10 +32,10 @@ services:
       CP_EMAIL_SMTP_PORT: ${CP_EMAIL_SMTP_PORT}
       CP_EMAIL_SMTP_CRYPTO: ${CP_EMAIL_SMTP_CRYPTO}
       # Media storage (local)
-      CP_MEDIA_FILE_MANAGER: local
+      CP_MEDIA_FILE_MANAGER: ${CP_MEDIA_FILE_MANAGER}
       CP_MEDIA_BASE_URL: ${CP_MEDIA_BASE_URL}
       CP_MEDIA_ROOT: ${CP_MEDIA_ROOT}
-      CP_MEDIA_S3_ENABLED: "false"
+      CP_MEDIA_S3_ENABLED: "${CP_MEDIA_S3_ENABLED}"
       # Additional settings
       CP_DISABLE_HTTPS: ${CP_DISABLE_HTTPS}
       CP_TIMEOUT: ${CP_TIMEOUT}
@@ -43,8 +43,8 @@ services:
       CP_PHP_MEMORY_LIMIT: ${CP_PHP_MEMORY_LIMIT}
       CP_UPLOAD_MAX_FILESIZE: ${CP_UPLOAD_MAX_FILESIZE}
       CP_POST_MAX_SIZE: ${CP_POST_MAX_SIZE}
-      VIRTUAL_HOST: ${CASTOPOD_DOMAIN},www.diepsychounddergeek.de,diepsychounddergeek.de,www.eingeekkommtseltenallein.de,eingeekkommtseltenallein.de
-      VIRTUAL_PORT: 8080
+      VIRTUAL_HOST: ${CASTOPOD_ADDITIONAL_DOMAINS}
+      VIRTUAL_PORT: ${CP_VIRTUAL_PORT}
     volumes:
       - /opt/docker/castopod/app/media:/app/public/media
     expose:

@@ -41,7 +41,7 @@ services:
       NGINX_PROXY_CONTAINER: ${COMPOSE_PROJECT_NAME}-nginx
       DEBUG: ${ACME_DEBUG}
       DEDYN_TOKEN: ${DESEC_TOKEN}
-      ACME_CHALLENGE: DNS-01
+      ACME_CHALLENGE: ${ACME_CHALLENGE}
       ACMESH_DNS_API_CONFIG: |-
         DNS_API: dns_desec
         DESEC_TOKEN: ${DESEC_TOKEN}
@@ -72,8 +72,8 @@ services:
       acme-companion:
         condition: service_started
     environment:
-      - VIRTUAL_HOST=dummy.meine-domain.de
-      - LETSENCRYPT_HOST=*.meine-domain.de,meine-domain.de
+      - VIRTUAL_HOST=${CERT_DUMMY_HOST}
+      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS}
       - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
     networks:
       - shared_proxy
@@ -87,8 +87,8 @@ services:
       acme-companion:
         condition: service_started
     environment:
-      - VIRTUAL_HOST=dummy.meine-domain.de
-      - LETSENCRYPT_HOST=*.meine-domain.de,meine-domain.de
+      - VIRTUAL_HOST=${CERT_DUMMY_HOST}
+      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS}
       - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
     networks:
       - shared_proxy
@@ -102,8 +102,8 @@ services:
       acme-companion:
         condition: service_started
     environment:
-      - VIRTUAL_HOST=dummy.meine-domain.de
-      - LETSENCRYPT_HOST=*.meine-domain.de,meine-domain.de
+      - VIRTUAL_HOST=${CERT_DUMMY_HOST}
+      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS}
       - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
     networks:
       - shared_proxy
@@ -117,8 +117,8 @@ services:
       acme-companion:
         condition: service_started
     environment:
-      - VIRTUAL_HOST=dummy.meine-domain.de
-      - LETSENCRYPT_HOST=*.meine-domain.de,meine-domain.de
+      - VIRTUAL_HOST=${CERT_DUMMY_HOST}
+      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS}
       - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
     networks:
       - shared_proxy
@@ -132,8 +132,8 @@ services:
       acme-companion:
         condition: service_started
     environment:
-      - VIRTUAL_HOST=dummy.meine-domain.de
-      - LETSENCRYPT_HOST=*.meine-domain.de,meine-domain.de
+      - VIRTUAL_HOST=${CERT_DUMMY_HOST}
+      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS}
       - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
     networks:
       - shared_proxy
@@ -147,8 +147,8 @@ services:
       acme-companion:
         condition: service_started
     environment:
-      - VIRTUAL_HOST=dummy.meine-domain.de
-      - LETSENCRYPT_HOST=*.meine-domain.de,meine-domain.de
+      - VIRTUAL_HOST=${CERT_DUMMY_HOST}
+      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS}
       - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
     networks:
       - shared_proxy
@@ -158,10 +158,10 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     environment:
-      - VIRTUAL_HOST=meine-domain.de,www.meine-domain.de
-      - LETSENCRYPT_HOST=meine-domain.de,www.meine-domain.de
+      - VIRTUAL_HOST=${MAIN_DOMAIN},${WWW_DOMAIN}
+      - LETSENCRYPT_HOST=${MAIN_DOMAIN},${WWW_DOMAIN}
       - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
-      - VIRTUAL_PORT=80
+      - VIRTUAL_PORT=${MAIN_SITE_PORT}
     volumes:
       - /opt/docker/yauh:/usr/share/nginx/html:ro
     networks:
