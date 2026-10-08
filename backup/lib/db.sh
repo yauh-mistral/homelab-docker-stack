@@ -91,8 +91,18 @@ dump_sqlite() {
       # Fallback: Viele Images (z.B. vaultwarden) enthalten kein sqlite3-Binary.
       # Dann das Verzeichnis der DB per Hilfscontainer mit sqlite3-Image sichern.
       log_warn "$SVC_NAME: sqlite3 nicht im Container verfuegbar — nutze Hilfscontainer-Fallback"
-      # Host-Pfad des Bind-Mounts ermitteln, das das DB-Verzeichnis abbildet
-      local src_dir="$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "$(dirname "$container_path")"}}{{.Source}}{{end}}{{end}}' "$DB_CONTAINER")"
+      # Host-Pfad des Bind-Mounts ermitteln, der den DB-Ordner abbildet.
+      # (Einfaches, robustes Parsing statt verschachtelter Go-Templates.)
+      local src_dir=""
+      local _m _src _dst
+      while IFS= read -r _m; do
+        [[ -z "$_m" ]] && continue
+        _src="${_m%%|*}"; _dst="${_m##*|}"
+        if [[ "$_dst" == "$(dirname "$container_path")" ]]; then
+          src_dir="$_src"
+          break
+        fi
+      done < <(docker inspect -f '{{range .Mounts}}{{if eq .Type "bind"}}{{printf "%s|%s\n" .Source .Destination}}{{end}}{{end}}' "$DB_CONTAINER" 2>>"$LOG_FILE")
       if [[ -n "$src_dir" && -d "$src_dir" ]]; then
         # Ein Hilfscontainer mit sqlite3-Image: liest die DB (ro) und schreibt
         # den konsistenten Snapshot direkt ins Zielverzeichnis (Online-Backup-API)

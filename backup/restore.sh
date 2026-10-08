@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # restore.sh — Restore eines Services aus dem NAS-Backup (/mnt/systems).
-# Nutzt dieselbe Deklaration wie der Dispatcher (services.d/<service>.env).
+# Nutzt dieselbe Auto-Discovery + Policy wie der Dispatcher (v1.x).
+# <service> ist der Container-Name (docker ps).
 #
 # Usage:
 #   restore.sh <service> [--version v.N] [--dry-run] [--db-only] [--files-only]
@@ -13,6 +14,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/common.sh"
 # shellcheck source=lib/db.sh
 source "$SCRIPT_DIR/lib/db.sh"
+# shellcheck source=lib/discovery.sh
+source "$SCRIPT_DIR/lib/discovery.sh"
 
 RESTORE_DATE=""
 DB_ONLY=false; FILES_ONLY=false
@@ -35,18 +38,18 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-# /etc/backup.conf zuerst laden (Quelle/Ziel: STACKS_DIR, BACKUP_ROOT, SERVICES_DIR, ...)
+# /etc/backup.conf zuerst laden (Quelle/Ziel: STACKS_DIR, BACKUP_ROOT, POLICY_DIR, ...)
 if [[ -f /etc/backup.conf ]]; then
   # shellcheck disable=SC1091
   source /etc/backup.conf
 fi
 
-SERVICES_DIR="${SERVICES_DIR:-$SCRIPT_DIR/services.d}"
-[[ -d "$SERVICES_DIR" ]] || { echo "services.d nicht gefunden" >&2; exit 2; }
-[[ -n "${STACKS_DIR:-}" ]] || { echo "STACKS_DIR nicht gesetzt — siehe /etc/backup.conf" >&2; exit 2; }
-DECL="$SERVICES_DIR/${SVC_ARG}.env"
-[[ -f "$DECL" ]] || { echo "Keine Deklaration fuer '$SVC_ARG' ($DECL)" >&2; exit 2; }
-load_declaration "$DECL"
+# shellcheck source=../policy.conf
+source "$SCRIPT_DIR/policy.conf"
+POLICY_DIR="${POLICY_DIR:-$SCRIPT_DIR/policies.d}"
+[[ -d "$POLICY_DIR" ]] || { echo "policies.d nicht gefunden" >&2; exit 2; }
+container_exists "$SVC_ARG" || { echo "Kein Container '$SVC_ARG' auf diesem Host (docker ps)" >&2; exit 2; }
+load_service_env "$SVC_ARG"
 
 log_init
 _acquire_lock

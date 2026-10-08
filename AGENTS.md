@@ -28,11 +28,11 @@
 - Secret-Maskierung mit **sachgerechten Herstellungs-Hinweisen**: Passwörter `openssl rand -base64 24`, Secrets/Keys `openssl rand -hex 32`, Salts `-hex 32`; **SMTP-Passwörter kommen vom Mail-Provider** (nicht generieren); **self-hosted Tokens** (vaultwarden `ADMIN_TOKEN`) einmalig selbst festlegen; externe API-Keys beim Anbieter erstellen. Vorhandene Kommentar-Erklärung über der Variable nicht duplizieren.
 - Verbindliche Secret-Liste und Format-Konventionen: `projects/env-details.md` (URL-Formate: trailing slash, Trennzeichen, Schemata).
 
-## Backup-System-Design (Stand)
+## Backup-System-Design (v1.0.0)
 
-- Deklarationen in `backup/services.d/*.env` (Kategorien: db_only/files_only/db_and_files/config_only/ignore). Rotation rsnapshot-artig (`v.0..v.N`), kein Timestamp im Pfad.
-- **Bekannte offene Baustellen** (priorisiert): Ghost-Root-Dump verifizieren (MySQL 9 FLUSH TABLES/RELOAD), PARTIAL-Status statt WARN+OK einführen, Tool-Output im Log mit Service-Prefix versehen, vaultwarden-SQLite (Volume-Pfad auflösen oder Copy im Stop-Fenster), bekannte SKIP-Lücken demuten (Whitelist), Consistency vs. Lauf-Status vereinheitlichen, `--list` soll ohne `STACKS_DIR`-Abbruch funktionieren.
-- Ziel-Konzept (beschlossen, noch nicht umgesetzt): **Inventar & Credentials aus der Compose-Wahrheit ableiten** (`docker compose config --format json`), `services.d/` reduziert sich auf Backup-Policy; Policy liegt künftig neben dem Projekt (`projects/<p>/backup.env`); Drift zwischen Deklaration und Realität als eigene Validierungsphase.
+- **Auto-Discovery (v1.0.0)**: Der Dispatcher liest laufende Container (`docker ps`), leitet Bind-Mounts (Datei-Backup) und DB-Typ/Credentials aus Container-ENV ab (`POSTGRES_*`/`MYSQL_*`/`MARIADB_*`). Statische `services.d/`-Deklarationen sind ENTFERNT. Rotation rsnapshot-artig (`v.0..v.N`), kein Timestamp im Pfad.
+- Policies nur fuer Ausnahmen: `backup/policy.conf` (globale Defaults: IGNORE_PATH_PREFIXES=/mnt,/tmp,/var/tmp; DEFAULT_FILE_EXCLUDES fuer Logs/Caches) + `backup/policies.d/<project|container>.env` (Container-Policy gewinnt): EXTRA_FILE_PATHS/EXCLUDES, STOP_SELF, KEEP_FILES, DB_DUMP_ALL, DB_TYPE=sqlite|forgejo, SQLITE_FILES, SVC_IGNORE.
+- **Geloesste Baustellen (v1.0.0)**: PARTIAL-Zaehler in Summary, rsync-Exit-Code + Output im Log, vaultwarden-SQLite-Bind-Mount-Aufloesung, Ghost-Root-Dump (Root-Credentials aus Container-ENV), `--list`/`--discover` ohne STACKS_DIR-Zwang.
 
 ## Stil & Kommunikation
 

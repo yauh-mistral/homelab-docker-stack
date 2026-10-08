@@ -14,19 +14,19 @@ Anleitung, um das Backup-System auf dem Ubuntu-Host `ovi` in Betrieb zu nehmen u
 ├── test-restore.sh             Dump-Restore-Test
 ├── install.sh                 (nur bei Installation; Kopierer)
 ├── lib/                       common.sh, db.sh
-├── services.d/*.env           Service-Deklarationen (installierte Kopie)
+├── policies.d/*.env            Policy-Overlays (installierte Kopie)
 └── docs/                      Referenz-Dokumentation
 
 /etc/backup.conf               Konfiguration: Quelle, Ziel, Restic (chmod 600)
 /mnt/systems/backups/ovi/      ZIEL auf dem NAS (db/ + files/ + _meta/)
 ```
 
-Das Backup-System liegt **bewusst nicht im Repo-Checkout** (`/opt/docker/arcane`): Der Installer kopiert es nach `/opt/docker/backup` (konfigurierbar via `--home`). Repo-Updates überschreiben die Installation nicht; ein Re-Run von `install.sh` aktualisiert sie (Deklarationen in `services.d/` können individuell angepasst bleiben, `rsync` ohne `--delete`).
+Das Backup-System liegt **bewusst nicht im Repo-Checkout** (`/opt/docker/arcane`): Der Installer kopiert es nach `/opt/docker/backup` (konfigurierbar via `--home`). Repo-Updates überschreiben die Installation nicht; ein Re-Run von `install.sh` aktualisiert sie (Policies in `policies.d/`/`policy.conf` können individuell angepasst bleiben, `rsync` ohne `--delete`).
 
 **Woher kommen Quelle und Ziel?** Ausdrücklich aus `/etc/backup.conf`:
 - `STACKS_DIR` — wo Compose-Stacks und deren `.env` leben (z.B. `/opt/docker/arcane/projects`). Deklarationen nutzen den Platzhalter `%STACKS_DIR%` (z.B. `ENV_FILE=%STACKS_DIR%/ghost/.env`), der Dispatcher löst ihn auf. So bleibt die Deklaration host-agnostisch.
 - `BACKUP_ROOT` — Ziel auf dem NAS (`/mnt/systems/backups/ovi`).
-- `SERVICES_DIR` — Deklarations-Heimat (bei Installation `/opt/docker/backup/services.d`).
+- `POLICY_DIR` — Policy-Heimat (bei Installation `/opt/docker/backup/policies.d`).
 
 ## Schritt 0: Voraussetzungen
 
@@ -46,7 +46,7 @@ sudo backup/install.sh \
 ```
 
 Der Installer:
-1. kopiert `backup.sh`, `restore.sh`, `test-restore.sh`, `lib/`, `services.d/` (und `docs/`) nach `/opt/docker/backup`
+1. kopiert `backup.sh`, `restore.sh`, `test-restore.sh`, `lib/`, `policies.d/`, `policy.conf` (und `docs/`) nach `/opt/docker/backup`
 2. erzeugt `/etc/backup.conf` (mit `chmod 600`) bzw. ergänzt fehlende Einträge in einer bestehenden Datei
 
 Alternativ ohne Parameter — der Installer fragt interaktiv nach dem Quellpfad.
@@ -60,19 +60,11 @@ Minimalinhalt:
 ```bash
 STACKS_DIR=/opt/docker/arcane/projects      # Quelle: Compose + .env
 BACKUP_ROOT=/mnt/systems/backups/ovi        # Ziel: NAS
-SERVICES_DIR=/opt/docker/backup/services.d  # Heimat der Deklarationen
+POLICY_DIR=/opt/docker/backup/policies.d  # Heimat der Policy-Overlays
 USE_RESTIC=false
 ```
 
-## Schritt 3: DB-Passwörter (nur für MySQL/MariaDB-Services)
-
-Postgres-Dumps laufen im Container über lokale Unix-Socket-Auth — kein Handbedarf. MySQL/MariaDB (`ghost`, ggf. `castopod`) brauchen `DB_PASSWORD`; die Ghost-Deklaration lädt es via `ENV_FILE=%STACKS_DIR%/ghost/.env`. Für castopod bei Bedarf in `services.d/castopod.env` ergänzen:
-```bash
-ENV_FILE=%STACKS_DIR%/castopod/.env
-DB_PASSWORD_VAR=MYSQL_PASSWORD
-```
-
-## Schritt 4: Trockenlauf (verändert nichts)
+## Schritt 3: Trockenlauf (verändert nichts) (verändert nichts)
 
 ```bash
 sudo /opt/docker/backup/backup.sh --dry-run
