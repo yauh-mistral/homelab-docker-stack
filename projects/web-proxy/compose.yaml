@@ -26,7 +26,6 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - proxy_net
       - shared_proxy
 
   acme-companion:
@@ -59,7 +58,6 @@ services:
       retries: 5
       start_period: 45s
     networks:
-      - proxy_net
       - shared_proxy
 
   # Wildcard-Zertifikat: ein Dummy-Container, alle Domain-Familien in einer
@@ -97,7 +95,5 @@ services:
       - shared_proxy
 
 networks:
-  proxy_net:
-    driver: bridge
   shared_proxy:
     external: true
