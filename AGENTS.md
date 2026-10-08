@@ -16,9 +16,11 @@
 
 ## Versionierung
 
-- `SCRIPT_VERSION` (Semantic Versioning) **nur** für `backup/`, `restore.sh`, `install.sh` — Start v0.0.1. MAJOR = Breaking (Config/Deklarationsformat/CLI), MINOR = Feature, PATCH = Fix.
-- **Hilfsskripte** (z. B. `make-env-examples.sh`) bekommen **keine** Versionsnummer.
-- `install.sh` stempelt die installierte Kopie mit Installationszeitpunkt (`INSTALL_STAMP`, `YYYY-MM-DD HH:MM`). Jedes Log beginnt mit `=== Version (vX.Y.Z <stamp>) ===` — veraltete Stände sofort erkennbar.
+- **Phase 1 (aktuell): Einfrieren bei v1.0.0 + Build-Nummer.** Bis der erste vollständige Ende-zu-Ende-Test erfolgreich durchgelaufen ist (Discovery → Dry-Run → echter Lauf → `test-restore.sh --all` alles grün), bleibt `SCRIPT_VERSION` bei v1.0.0. Der Patch-Level wird über `SCRIPT_BUILD` (PR-Nummer) erkannt: Log zeigt `v1.0.0+#<PR> <stamp>`.
+- **Phase 2 (nach E2E-Erfolg): Semantic Versioning Mode.** Sobald der E2E-Test komplett grün ist, wird auf SemVer umgestellt: MAJOR = Breaking (Config/Deklarationsformat/CLI), MINOR = Feature, PATCH = Fix. Der Übergang selbst ist ein User-Entscheid, nicht automatisch.
+- **`SCRIPT_BUILD`** (PR-Nummer) wird von der GitHub Action `.github/workflows/build-number.yml` nach jedem Merge automatisch nachgetragen (liest `(#N)` aus dem Merge-Commit-Subject). Manuelle Pflege entfällt.
+- `SCRIPT_VERSION` gilt **nur** für `backup/`, `restore.sh`, `install.sh` — Hilfsskripte (z. B. `make-env-examples.sh`) bekommen **keine** Versionsnummer.
+- `install.sh` stempelt die installierte Kopie mit Installationszeitpunkt (`INSTALL_STAMP`, `YYYY-MM-DD HH:MM`) und `SCRIPT_BUILD`. Jedes Log beginnt mit der Versionszeile (`vX.Y.Z+#<PR> <stamp>`) — veraltete Stände sofort erkennbar.
 
 ## .env-Konventionen
 
