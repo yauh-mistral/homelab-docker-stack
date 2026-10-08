@@ -18,7 +18,7 @@ services:
       retries: 5
 
     networks:
-      - litellm_net
+      - ai_net
   litellm:
     container_name: litellm
     image: ghcr.io/berriai/litellm:main-latest
@@ -43,11 +43,71 @@ services:
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     networks:
-      - litellm_net
+      - ai_net
       - shared_proxy
 
+  crawl4ai:
+    container_name: crawl4ai
+    image: unclecode/crawl4ai:latest
+    restart: unless-stopped
+    environment:
+      - VIRTUAL_HOST=crawl4ai.meine-domain.de
+      - VIRTUAL_PORT=11235
+      - TZ=Europe/Berlin
+      - CRAWL4AI_API_TOKEN=${CRAWL4AI_API_TOKEN:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11235/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    networks:
+      - ai_net
+      - shared_proxy
+    shm_size: '2gb'
+
+
+  valkey:
+    container_name: valkey
+    image: docker.io/valkey/valkey:8-alpine
+    command: valkey-server --save 30 1 --loglevel warning
+    restart: unless-stopped
+    volumes:
+      - /opt/docker/valkey/:/data
+    networks:
+      - ai_net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+  searxng:
+    container_name: searxng
+    image: docker.io/searxng/searxng:latest
+    restart: unless-stopped
+    depends_on:
+      - ai_net
+    environment:
+      - SEARXNG_BASE_URL=https://${SEARXNG_HOSTNAME:-localhost}/
+      - VIRTUAL_HOST=${SEARXNG_HOSTNAME}
+      - VIRTUAL_PORT=8080
+      - TZ=Europe/Berlin
+    volumes:
+      - /opt/docker/searxng/etc/searchnxg:/etc/searxng:rw
+      - /opt/docker/searxng/data:/var/cache/searxng:rw
+    networks:
+      - ai_net
+      - shared_proxy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
 networks:
-  litellm_net:
+  ai_net:
     driver: bridge
   shared_proxy:
     external: true

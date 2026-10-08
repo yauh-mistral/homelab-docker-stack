@@ -1,5 +1,4 @@
 services:
-
   omada-controller:
     container_name: omada-controller
     image: mbentley/omada-controller:6
@@ -33,6 +32,21 @@ services:
         limits:
           cpus: '2.0'
           memory: 4G
+
+  crowdsec:
+    container_name: crowdsec
+    image: crowdsecurity/crowdsec:latest
+    restart: unless-stopped
+    environment:
+      - COLLECTIONS=crowdsecurity/nginx crowdsecurity/sshd crowdsecurity/linux
+    volumes:
+      - /opt/docker/crowdsec/config:/etc/crowdsec
+      - /opt/docker/crowdsec/data:/var/lib/crowdsec/data
+      - /var/log/auth.log:/var/log/auth.log:ro
+      - /var/log/syslog:/var/log/syslog:ro
+      - /opt/docker/nginx/logs:/var/log/nginx:ro # Access logs for 80/443
+    ports:
+      - "127.0.0.1:8929:8080" # LAPI endpoint for local bouncers
 
 networks:
   shared_proxy:

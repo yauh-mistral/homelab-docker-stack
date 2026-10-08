@@ -61,6 +61,76 @@ services:
           cpus: '1.0'
           memory: 1G
 
+  shynet-db:
+    container_name: analytics-db
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      # Database Credentials
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      # Bind mount for database data persistence
+      - ${DB_DATA_PATH}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - default_shynet # Internal network only
+  shynet-server:
+    container_name: analytics-shynet-server
+    # Use the official Shynet image
+    image: milesmcc/shynet:latest
+    restart: always
+    depends_on:
+      shynet-db:
+        condition: service_healthy # Wait for the database to be ready
+    environment:
+      # Standard Variables
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+
+      # Proxy Configuration for Nginx-Proxy
+      - VIRTUAL_HOST=${SHYNET_HOST}
+      - VIRTUAL_PORT=8080
+      - DJANGO_SECURE_PROXY_SSL_HEADER=True
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}
+      #- LETSENCRYPT_CHALLENGE=dns
+      # Database Connection (using the internal Docker network name)
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@shynet-db:5432/${POSTGRES_DB}
+
+      # Security & Initialization Secrets
+      - SECRET_KEY=${SECRET_KEY}
+      - DB_SECRET_KEY=${DB_SECRET_KEY}
+
+      # Hostnames allowed by Django for security
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - SECURE_PROXY_SSL_HEADER=HTTP_X_FORWARDED_PROTO,https
+
+      # Email setup (Recommended for admin access/alerts)
+      - SERVER_EMAIL=Shynet <${SMTP_SENDER}>
+      - DEFAULT_FROM_EMAIL=${SMTP_SENDER}
+      - EMAIL_HOST=${SMTP_HOST}
+      - EMAIL_PORT=${SMTP_PORT}
+      - EMAIL_HOST_USER=${SMTP_USER}
+      - EMAIL_HOST_PASSWORD=${SMTP_PASSWORD}
+      - EMAIL_USE_SSL=True
+
+
+    volumes:
+      # Persistent storage for static files and logs
+      - ${SHYNET_DATA_PATH}:/app/data
+      - /etc/localtime:/etc/localtime:ro
+
+    networks:
+
+      - shared_proxy   # External access via Nginx-Proxy
+      - default_shynet # Internal communication
 networks:
   shared_proxy:
     external: true
