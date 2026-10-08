@@ -62,11 +62,13 @@ services:
       - proxy_net
       - shared_proxy
 
-  # Wildcard-Zertifikat pro Domain-Familie. Der VIRTUAL_HOST ist ein reiner
-  # Dummy (Routing-Platzhalter, damit der Proxy einen vhost anlegt) und bewusst
-  # hardcoded: er gehoert zur Compose-Struktur, nicht zur Konfiguration.
-  cert-1:
-    container_name: cert-1
+  # Wildcard-Zertifikat: ein Dummy-Container, alle Domain-Familien in einer
+  # Variable. Der VIRTUAL_HOST ist ein reiner Routing-Platzhalter (bewusst
+  # hardcoded, gehoert zur Compose-Struktur). Fuer mehrere getrennte
+  # Domain-Familien kann dieser Block dupliziert werden (eigener Container
+  # + eigene WILDCARD_DOMAINS-Variable je Familie).
+  cert-dummy:
+    container_name: cert-dummy
     image: alpine
     command: ["sh", "-c", "sleep infinity"]
     restart: unless-stopped
@@ -74,83 +76,8 @@ services:
       acme-companion:
         condition: service_started
     environment:
-      - VIRTUAL_HOST=cert-dummy-1.local
-      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS_1}
-      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
-    networks:
-      - shared_proxy
-
-  cert-2:
-    container_name: cert-2
-    image: alpine
-    command: ["sh", "-c", "sleep infinity"]
-    restart: unless-stopped
-    depends_on:
-      acme-companion:
-        condition: service_started
-    environment:
-      - VIRTUAL_HOST=cert-dummy-2.local
-      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS_2}
-      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
-    networks:
-      - shared_proxy
-
-  cert-3:
-    container_name: cert-3
-    image: alpine
-    command: ["sh", "-c", "sleep infinity"]
-    restart: unless-stopped
-    depends_on:
-      acme-companion:
-        condition: service_started
-    environment:
-      - VIRTUAL_HOST=cert-dummy-3.local
-      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS_3}
-      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
-    networks:
-      - shared_proxy
-
-  cert-4:
-    container_name: cert-4
-    image: alpine
-    command: ["sh", "-c", "sleep infinity"]
-    restart: unless-stopped
-    depends_on:
-      acme-companion:
-        condition: service_started
-    environment:
-      - VIRTUAL_HOST=cert-dummy-4.local
-      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS_4}
-      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
-    networks:
-      - shared_proxy
-
-  cert-5:
-    container_name: cert-5
-    image: alpine
-    command: ["sh", "-c", "sleep infinity"]
-    restart: unless-stopped
-    depends_on:
-      acme-companion:
-        condition: service_started
-    environment:
-      - VIRTUAL_HOST=cert-dummy-5.local
-      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS_5}
-      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
-    networks:
-      - shared_proxy
-
-  cert-6:
-    container_name: cert-6
-    image: alpine
-    command: ["sh", "-c", "sleep infinity"]
-    restart: unless-stopped
-    depends_on:
-      acme-companion:
-        condition: service_started
-    environment:
-      - VIRTUAL_HOST=cert-dummy-6.local
-      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS_6}
+      - VIRTUAL_HOST=cert-dummy.local
+      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS}
       - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
     networks:
       - shared_proxy
