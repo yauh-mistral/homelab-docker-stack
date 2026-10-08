@@ -88,7 +88,7 @@ services:
     image: docker.io/searxng/searxng:latest
     restart: unless-stopped
     depends_on:
-      - ai_net
+      - valkey
     environment:
       - SEARXNG_BASE_URL=https://${SEARXNG_HOSTNAME:-localhost}/
       - VIRTUAL_HOST=${SEARXNG_HOSTNAME}
