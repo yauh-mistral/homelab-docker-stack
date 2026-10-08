@@ -2,7 +2,7 @@
 
 Der Dispatcher entdeckt Services automatisch aus den laufenden Containern
 (Bind-Mounts = Datei-Backup, DB-Image/ENV = DB-Dump). Diese Policies
-ergänzen/überschreiben pro Projekt (`<project>.env`) oder Container
+ergänzen/überschreiben pro Projekt (`<project>.project.env`) oder Container
 (`<container>.env`, gewinnt) nur das nicht Ableitbare:
 
 - `SVC_IGNORE=true` — Container komplett ausschließen
