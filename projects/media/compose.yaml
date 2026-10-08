@@ -12,7 +12,7 @@ services:
       - VIRTUAL_HOST=plex.meine-domain.de
       - VIRTUAL_PORT=32400
       - NETWORK_ACCESS=external
-      - PLEX_CLAIM=claim-aHsYRvWzyexvHyqzMp3z
+      - PLEX_CLAIM=${PLEX_CLAIM}
     volumes:
       - /opt/docker/plex/conf:/config
       - /mnt/media/video/tv:/tv
@@ -86,6 +86,43 @@ services:
       - /mnt/media/library/calibre:/books
     networks:
       - shared_proxy
+
+  tdarr:
+    container_name: tdarr-tdarr
+    image: ghcr.io/haveagitgat/tdarr:latest
+    restart: always
+    environment:
+      TZ: ${TZ}
+      PUID: ${PUID}
+      PGID: ${PGID}
+      UMASK_SET: ${UMASK}
+      serverIP: ${TDARR_SERVER_IP}
+      serverPort: ${TDARR_SERVER_PORT}
+      webUIPort: ${TDARR_WEBUI_PORT}
+      internalNode: ${TDARR_INTERNAL_NODE}
+      inContainer: ${TDARR_IN_CONTAINER}
+      nodeName: ${TDARR_NODE_NAME}
+      # --- nginx proxy environment ---
+      VIRTUAL_HOST: ${VIRTUAL_HOST}
+      VIRTUAL_PORT: ${TDARR_WEBUI_PORT}
+
+    volumes:
+      - ${TDARR_BASE}/server:/app/server
+      - ${TDARR_BASE}/configs:/app/configs
+      - ${TDARR_BASE}/logs:/app/logs
+      - ${MEDIA_PATH}:/media
+      - ${TDARR_TEMP}:/temp
+
+    devices:
+      - ${TDARR_DRI_DEVICE}:${TDARR_DRI_DEVICE}
+    ports:
+      - "${TDARR_WEBUI_PORT}:${TDARR_WEBUI_PORT}"
+      - "${TDARR_SERVER_PORT}:${TDARR_SERVER_PORT}"
+      - "${TDARR_INTERNAL_NODE_PORT}:${TDARR_INTERNAL_NODE_PORT}"
+      - "${TDARR_EXTRA_NODE_PORT}:${TDARR_EXTRA_NODE_PORT}"
+    networks:
+      - shared_proxy
+
 networks:
   shared_proxy:
     external: true
