@@ -50,6 +50,7 @@ load_declaration "$DECL"
 
 log_init
 _acquire_lock
+log_info "Version ($(version_string))"
 log_info "Restore: $SVC_NAME (date=${RESTORE_DATE:-latest}, dry-run=$DRY_RUN)"
 
 # ---------------------------------------------------------------------
