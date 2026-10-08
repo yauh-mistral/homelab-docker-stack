@@ -60,20 +60,25 @@ copy_file() {
   fi
 }
 copy_tree() {
-  local src="$1" dest="$2"
+  local src="$1" dest="$2" mirror="${3:-false}"
   mkdir -p "$dest"
   if command -v rsync >/dev/null 2>&1; then
-    rsync -a "$src/" "$dest/"
+    local -a opts=(-a)
+    [[ "$mirror" == "true" ]] && opts+=(--delete)
+    rsync "${opts[@]}" "$src/" "$dest/"
   else
     cp -a "$src/." "$dest/"
+    if [[ "$mirror" == "true" ]]; then
+      echo "WARNUNG: rsync nicht verfuegbar — --delete (Mirror) uebersprungen." >&2
+      echo "         Bitte $dest manuell mit dem Repo-Stand abgleichen." >&2
+    fi
   fi
 }
 copy_file "$SCRIPT_DIR/backup.sh" "$INSTALL_HOME/"
 copy_file "$SCRIPT_DIR/restore.sh" "$INSTALL_HOME/"
 copy_file "$SCRIPT_DIR/test-restore.sh" "$INSTALL_HOME/"
 copy_tree "$SCRIPT_DIR/lib" "$INSTALL_HOME/lib"
-copy_tree "$SCRIPT_DIR/lib" "$INSTALL_HOME/lib"
-copy_tree "$SCRIPT_DIR/policies.d" "$INSTALL_HOME/policies.d"
+copy_tree "$SCRIPT_DIR/policies.d" "$INSTALL_HOME/policies.d" true
 copy_file "$SCRIPT_DIR/policy.conf" "$INSTALL_HOME/"
 chmod +x "$INSTALL_HOME"/*.sh
 
