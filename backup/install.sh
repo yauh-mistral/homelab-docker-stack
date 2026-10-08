@@ -11,8 +11,9 @@ set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Version zum Installationszeitpunkt aus lib/common.sh uebernehmen
+# Version und Build (PR-Nummer) zum Installationszeitpunkt aus lib/common.sh uebernehmen
 LIB_VERSION="$(grep -m1 '^SCRIPT_VERSION=' "$SCRIPT_DIR/lib/common.sh" | cut -d= -f2 | tr -d '"')"
+LIB_BUILD="$(grep -m1 '^SCRIPT_BUILD=' "$SCRIPT_DIR/lib/common.sh" | cut -d= -f2 | tr -d '"')"
 INSTALL_STAMP="$(date '+%Y-%m-%d %H:%M')"
 
 INSTALL_HOME="/opt/docker/backup"
@@ -82,11 +83,14 @@ copy_tree "$SCRIPT_DIR/policies.d" "$INSTALL_HOME/policies.d" true
 copy_file "$SCRIPT_DIR/policy.conf" "$INSTALL_HOME/"
 chmod +x "$INSTALL_HOME"/*.sh
 
-# Installationszeitpunkt in die installierte Kopie von lib/common.sh schreiben,
-# damit jedes Backup-/Restore-Log die Version + Install-Zeit ausweist.
+# Installationszeitpunkt und Build (PR-Nummer) in die installierte Kopie von
+# lib/common.sh schreiben, damit jedes Backup-/Restore-Log Version + Patch-Level +
+# Install-Zeit ausweist.
 sed -i "s|^INSTALL_STAMP=\"\${INSTALL_STAMP:-.*}\"|INSTALL_STAMP=\"$INSTALL_STAMP\"|" \
   "$INSTALL_HOME/lib/common.sh" || true
-echo "Kopiert: backup.sh, restore.sh, test-restore.sh, lib/, policies.d/, policy.conf -> $INSTALL_HOME (Version $LIB_VERSION, installiert $INSTALL_STAMP)"
+sed -i "s|^SCRIPT_BUILD=\"\${SCRIPT_BUILD:-.*}\"|SCRIPT_BUILD=\"$LIB_BUILD\"|" \
+  "$INSTALL_HOME/lib/common.sh" || true
+echo "Kopiert: backup.sh, restore.sh, test-restore.sh, lib/, policies.d/, policy.conf -> $INSTALL_HOME (Version ${LIB_VERSION}${LIB_BUILD:+ +#$LIB_BUILD}, installiert $INSTALL_STAMP)"
 
 # --- Konfiguration schreiben (vorhandene nicht ueberschreiben, nur ergaenzen) ---
 if [[ -f "$CONF_FILE" ]]; then
