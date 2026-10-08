@@ -1,11 +1,12 @@
-
 services:
   ghost:
-    image: ghost:6-alpine
     container_name: ghost
+    image: ghost:6-alpine
     restart: unless-stopped
-    ports:
-      - "${GHOST_WEB_PORT}:2368"
+    depends_on:
+      - mysql
+      - activitypub
+
     environment:
       - VIRTUAL_HOST=${GHOST_DOMAIN}
       - url=${GHOST_URL}
@@ -17,7 +18,7 @@ services:
       - database__connection__database=${GHOST_DB_NAME}
       # ActivityPub configuration
       - activitypub__enabled=true
-      #- activitypub__url=https://www.herrhochhaus.de/.ghost/activitypub
+      #- activitypub__url=https://www.meine-domain.de/.ghost/activitypub
       - activitypub__url=http://activitypub:8080/.ghost/activitypub
       - activitypub__webhookSecret=${ACTIVITYPUB_WEBHOOK_SECRET}
       - ACTIVITYPUB_WEBHOOK_SECRET=${ACTIVITYPUB_WEBHOOK_SECRET}
@@ -28,26 +29,25 @@ services:
       - mail__options__service=${SMTP_SERVICE}
       - mail__options__host=${SMTP_HOST}
       - mail__options__port=${SMTP_PORT}
-      - mail__options__auth__user=${SMTP_USERNAME}
+      - mail__options__auth__user=${SMTP_USER}
       - mail__options__auth__pass=${SMTP_PASSWORD}
       - mail__from=${SMTP_FROM}
     volumes:
       - ${GHOST_CONTENT_PATH}:/var/lib/ghost/content
+    ports:
+      - "${GHOST_WEB_PORT}:2368"
     networks:
       - shared_proxy
       - ghost_network
-    depends_on:
-      - mysql
-      - activitypub
-
   activitypub:
-    image: ghcr.io/tryghost/activitypub:1.2
     container_name: ghost-activitypub
+    image: ghcr.io/tryghost/activitypub:1.2
     restart: always
-    expose:
-      - "8080"
-    volumes:
-      - ${GHOST_CONTENT_PATH}:/opt/activitypub/content
+    depends_on:
+      mysql:
+        condition: service_healthy
+      activitypub-migrate:
+        condition: service_completed_successfully
     environment:
       - NODE_ENV=production
       - MYSQL_HOST=mysql
@@ -56,23 +56,22 @@ services:
       - MYSQL_DATABASE=${ACTIVITYPUB_DB_NAME}
       - LOCAL_STORAGE_PATH=/opt/activitypub/content/images/activitypub
       - LOCAL_STORAGE_HOSTING_URL=${GHOST_URL}/content/images/activitypub
-      - PUBLIC_URL=https://www.herrhochhaus.de
+      - PUBLIC_URL=https://www.meine-domain.de
       - WEBHOOK_SECRET=${ACTIVITYPUB_WEBHOOK_SECRET}
       - BASE_PATH=/.ghost/activitypub
       - GHOST_URL=http://ghost:2368
       - QUEUE_DRIVER=memory
-    depends_on:
-      mysql:
-        condition: service_healthy
-      activitypub-migrate:
-        condition: service_completed_successfully
+    volumes:
+      - ${GHOST_CONTENT_PATH}:/opt/activitypub/content
+    expose:
+      - "8080"
     networks:
       - shared_proxy
       - ghost_network
 
   mysql:
-    image: mysql:9
     container_name: ghost-mysql
+    image: mysql:9
     restart: always
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
@@ -80,11 +79,11 @@ services:
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - TZ=${TZ}
-    ports:
-      - "${GHOST_MYSQL_PORT}:3306"
     volumes:
       - ${MYSQL_DATA_PATH}:/var/lib/mysql
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "${GHOST_MYSQL_PORT}:3306"
     healthcheck:
       test: mysqladmin ping -p$$MYSQL_ROOT_PASSWORD -h 127.0.0.1
       interval: 1s
@@ -95,17 +94,17 @@ services:
       - ghost_network
 
   activitypub-migrate:
-    image: ghcr.io/tryghost/activitypub-migrations:1.2
     container_name: ghost-activitypub-migrate
+    image: ghcr.io/tryghost/activitypub-migrations:1.2
+    restart: "no"
+
+    depends_on:
+      mysql:
+        condition: service_healthy
     environment:
       - MYSQL_DB=mysql://${MYSQL_USER:-ghost}:${MYSQL_PASSWORD:?MYSQL_PASSWORD environment variable is required}@tcp(mysql:3306)/${ACTIVITYPUB_DB_NAME}
     networks:
       - ghost_network
-    depends_on:
-      mysql:
-        condition: service_healthy
-    restart: "no"
-
 networks:
   ghost_network:
     driver: bridge

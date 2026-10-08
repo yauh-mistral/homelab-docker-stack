@@ -1,13 +1,12 @@
-
 services:
   app:
-    image: castopod/castopod:latest
     container_name: castopod_app
+    image: castopod/castopod:latest
     restart: unless-stopped
-    expose:
-      - "8080"
-    volumes:
-      - /opt/docker/castopod/app/media:/app/public/media
+    depends_on:
+      - mariadb
+      - redis
+
     environment:
       CP_ENVIRONMENT: ${CP_ENVIRONMENT}
       MYSQL_DATABASE: ${MARIADB_DATABASE}
@@ -28,7 +27,7 @@ services:
       # Email configuration
       CP_EMAIL_SMTP_HOST: ${CP_EMAIL_SMTP_HOST}
       CP_EMAIL_FROM: ${CP_EMAIL_FROM}
-      CP_EMAIL_SMTP_USERNAME: ${CP_EMAIL_SMTP_USERNAME}
+      CP_EMAIL_SMTP_USERNAME: ${CP_EMAIL_SMTP_USER}
       CP_EMAIL_SMTP_PASSWORD: ${CP_EMAIL_SMTP_PASSWORD}
       CP_EMAIL_SMTP_PORT: ${CP_EMAIL_SMTP_PORT}
       CP_EMAIL_SMTP_CRYPTO: ${CP_EMAIL_SMTP_CRYPTO}
@@ -46,33 +45,33 @@ services:
       CP_POST_MAX_SIZE: ${CP_POST_MAX_SIZE}
       VIRTUAL_HOST: ${CASTOPOD_DOMAIN},www.diepsychounddergeek.de,diepsychounddergeek.de,www.eingeekkommtseltenallein.de,eingeekkommtseltenallein.de
       VIRTUAL_PORT: 8080
+    volumes:
+      - /opt/docker/castopod/app/media:/app/public/media
+    expose:
+      - "8080"
     networks:
       - castopod
       - shared_proxy
-    depends_on:
-      - mariadb
-      - redis
-
   mariadb:
-    image: mariadb:11.2
     container_name: castopod_mariadb
+    image: mariadb:11.2
     restart: unless-stopped
-    volumes:
-      - /opt/docker/castopod/mariadb:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MARIADB_DATABASE}
       MYSQL_USER: ${MARIADB_USER}
       MYSQL_PASSWORD: ${MARIADB_PASSWORD}
+    volumes:
+      - /opt/docker/castopod/mariadb:/var/lib/mysql
     networks:
       - castopod
 
   redis:
-    image: redis:7.2-alpine
     container_name: castopod_redis
-    restart: unless-stopped
+    image: redis:7.2-alpine
     command: >
       --requirepass ${CP_REDIS_PASSWORD}
+    restart: unless-stopped
     volumes:
       - /opt/docker/castopod/redis:/data
     networks:

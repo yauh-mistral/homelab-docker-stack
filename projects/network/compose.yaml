@@ -8,9 +8,13 @@ services:
       - no-new-privileges:true
     environment:
       - TZ=${TZ}
-      - VIRTUAL_HOST=omada.islasorna.de
+      - VIRTUAL_HOST=omada.meine-domain.de
       - VIRTUAL_PORT=8043
       - VIRTUAL_PROTO=https
+    volumes:
+      - /opt/docker/omada/work:/opt/tplink/EAPController/work:rw
+      - /opt/docker/omada/logs:/opt/tplink/EAPController/logs:rw
+      - /opt/docker/omada/data:/opt/tplink/EAPController/data:rw
     ports:
       # Omada Device Management & Discovery (Required for APs/Switches)
       - "29810:29810/udp"
@@ -22,10 +26,6 @@ services:
       - "27001:27001/udp"
       # Direct local LAN access to Web UI (Bypasses reverse proxy if needed)
       - "8043:8043/tcp"
-    volumes:
-      - /opt/docker/omada/work:/opt/tplink/EAPController/work:rw
-      - /opt/docker/omada/logs:/opt/tplink/EAPController/logs:rw
-      - /opt/docker/omada/data:/opt/tplink/EAPController/data:rw
     networks:
       - shared_proxy
     deploy:

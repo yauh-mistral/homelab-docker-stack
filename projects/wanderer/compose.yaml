@@ -1,20 +1,17 @@
-
 x-common-env: &cenv
   MEILI_URL: http://search:7700
   MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
 
 services:
   search:
-    image: getmeili/meilisearch:v1.11.3
     container_name: wanderer_search
+    image: getmeili/meilisearch:v1.11.3
     restart: unless-stopped
     environment:
       <<: *cenv
       MEILI_NO_ANALYTICS: "true"
     volumes:
       - /opt/docker/wanderer/search:/meili_data/data.ms
-    networks:
-      - wanderer
     healthcheck:
       test: curl --fail http://localhost:7700/health || exit 1
       interval: 15s
@@ -22,9 +19,11 @@ services:
       start_period: 20s
       timeout: 10s
 
+    networks:
+      - wanderer
   db:
-    image: flomp/wanderer-db
     container_name: wanderer_db
+    image: flomp/wanderer-db
     restart: unless-stopped
     depends_on:
       search:
@@ -37,8 +36,6 @@ services:
     volumes:
       - /opt/docker/wanderer/db:/pb_data
       - /opt/docker/wanderer/plugins:/data/plugins
-    networks:
-      - wanderer
     healthcheck:
       test: ["CMD", "/curl", "--fail", "http://localhost:8090/health"]
       interval: 15s
@@ -46,17 +43,17 @@ services:
       start_period: 20s
       timeout: 10s
 
+    networks:
+      - wanderer
   web:
-    image: flomp/wanderer-web
     container_name: wanderer_web
+    image: flomp/wanderer-web
     restart: unless-stopped
     depends_on:
       search:
         condition: service_healthy
       db:
         condition: service_healthy
-    expose:
-      - "3000"
     environment:
       <<: *cenv
       ORIGIN: ${ORIGIN}
@@ -73,9 +70,8 @@ services:
       VIRTUAL_PORT: 3000
     volumes:
       - /opt/docker/wanderer/uploads:/app/uploads
-    networks:
-      - wanderer
-      - shared_proxy
+    expose:
+      - "3000"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:3000/"]
       interval: 15s
@@ -83,6 +79,9 @@ services:
       start_period: 20s
       timeout: 10s
 
+    networks:
+      - wanderer
+      - shared_proxy
 networks:
   wanderer:
   shared_proxy:

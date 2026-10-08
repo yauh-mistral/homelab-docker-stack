@@ -16,33 +16,33 @@ services:
     # extends:
     #   file: hwaccel.transcoding.yml
     #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
-    volumes:
-      # Do not edit the next line. If you want to change the media storage location on your system, edit the value of UPLOAD_LOCATION in the .env file
-      - ${UPLOAD_LOCATION}:/data
-      - /etc/localtime:/etc/localtime:ro
+    restart: always
+    depends_on:
+      - redis
+      - database
     environment:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - VIRTUAL_HOST=immich.islanublar.de
+      - VIRTUAL_HOST=immich.meine-domain.de
       - UPLOAD_LOCATION=${UPLOAD_LOCATION}
       - DB_DATA_LOCATION=${DB_DATA_LOCATION}
       - IMMICH_VERSION=${IMMICH_VERSION}
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - DB_USERNAME=${POSTGRES_USER}
       - DB_DATABASE_NAME=${POSTGRES_DB}
+    volumes:
+      # Do not edit the next line. If you want to change the media storage location on your system, edit the value of UPLOAD_LOCATION in the .env file
+      - ${UPLOAD_LOCATION}:/data
+      - /etc/localtime:/etc/localtime:ro
     ports:
       - '2283:2283'
-    depends_on:
-      - redis
-      - database
-    restart: always
     healthcheck:
       disable: false
     networks:
       - shared_proxy
       - default
-      
+
   immich-machine-learning:
     container_name: immich_machine_learning
     # For hardware acceleration, add one of -[armnn, cuda, rocm, openvino, rknn] to the image tag.
@@ -51,8 +51,7 @@ services:
     # extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/ml-hardware-acceleration
     #   file: hwaccel.ml.yml
     #   service: cpu # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
-    volumes:
-      - model-cache:/cache
+    restart: always
     environment:
       - UPLOAD_LOCATION=${UPLOAD_LOCATION}
       - DB_DATA_LOCATION=${DB_DATA_LOCATION}
@@ -60,7 +59,8 @@ services:
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - DB_USERNAME=${POSTGRES_USER}
       - DB_DATABASE_NAME=${POSTGRES_DB}
-    restart: always
+    volumes:
+      - model-cache:/cache
     healthcheck:
       disable: false
     networks:
@@ -69,15 +69,16 @@ services:
   redis:
     container_name: immich_redis
     image: docker.io/valkey/valkey:9@sha256:546304417feac0874c3dd576e0952c6bb8f06bb4093ea0c9ca303c73cf458f63
+    restart: always
     healthcheck:
       test: redis-cli ping || exit 1
-    restart: always
     networks:
       - default
 
   database:
     container_name: immich_postgres
     image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    restart: always
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -86,13 +87,12 @@ services:
     volumes:
       # Do not edit the next line. If you want to change the database storage location on your system, edit the value of DB_DATA_LOCATION in the .env file
       - ${DB_DATA_LOCATION}:/var/lib/postgresql/data
-    shm_size: 128mb
-    restart: always
     healthcheck:
       disable: false
     networks:
       - default
 
+    shm_size: 128mb
 volumes:
   model-cache:
 

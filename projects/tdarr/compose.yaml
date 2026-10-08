@@ -1,18 +1,8 @@
-
 services:
   tdarr:
-    image: ghcr.io/haveagitgat/tdarr:latest
     container_name: ${COMPOSE_PROJECT_NAME}-tdarr
+    image: ghcr.io/haveagitgat/tdarr:latest
     restart: always
-    networks:
-      - shared_proxy
-    devices:
-      - ${TDARR_DRI_DEVICE}:${TDARR_DRI_DEVICE}
-    ports:
-      - "${TDARR_WEBUI_PORT}:${TDARR_WEBUI_PORT}"
-      - "${TDARR_SERVER_PORT}:${TDARR_SERVER_PORT}"
-      - "${TDARR_INTERNAL_NODE_PORT}:${TDARR_INTERNAL_NODE_PORT}"
-      - "${TDARR_EXTRA_NODE_PORT}:${TDARR_EXTRA_NODE_PORT}"
     environment:
       TZ: ${TZ}
       PUID: ${PUID}
@@ -35,6 +25,15 @@ services:
       - ${MEDIA_PATH}:/media
       - ${TDARR_TEMP}:/temp
 
+    devices:
+      - ${TDARR_DRI_DEVICE}:${TDARR_DRI_DEVICE}
+    ports:
+      - "${TDARR_WEBUI_PORT}:${TDARR_WEBUI_PORT}"
+      - "${TDARR_SERVER_PORT}:${TDARR_SERVER_PORT}"
+      - "${TDARR_INTERNAL_NODE_PORT}:${TDARR_INTERNAL_NODE_PORT}"
+      - "${TDARR_EXTRA_NODE_PORT}:${TDARR_EXTRA_NODE_PORT}"
+    networks:
+      - shared_proxy
 networks:
   shared_proxy:
     external: true
