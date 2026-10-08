@@ -304,7 +304,9 @@ backup_files_for_service() {
       log_dry "$SVC_NAME: wuerde rsyncen: $p -> $dest/$(basename "$p") (excludes: ${FILE_EXCLUDES[*]:-none})"
     else
       local -a excludes=("${FILE_EXCLUDES[@]:-}")
-      if rsync_backup "${p%/}/" "$dest/$(basename "$p")" "${excludes[@]}"; then
+      local src_arg="$p"
+      [[ -d "$p" ]] && src_arg="${p%/}/"
+      if rsync_backup "$src_arg" "$dest/$(basename "$p")" "${excludes[@]}"; then
         log_ok "$SVC_NAME: rsync $p -> $dest/$(basename "$p")"
         local -a _fs
         _fs=($(find "$dest/$(basename "$p")" -type f 2>/dev/null | wc -l; du -sb "$dest/$(basename "$p")" 2>/dev/null | cut -f1))

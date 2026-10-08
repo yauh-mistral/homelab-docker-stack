@@ -74,6 +74,21 @@ log_fail()  { _log FAIL  "$@"; }
 log_dry()   { _log DRY   "$@"; }
 log_warn()  { _log WARN  "$@"; }
 
+# Praefix fuer externen Tool-Output (rsync --stats, forgejo dump, etc.),
+# damit die Log-Datei einheitliche Timestamps behaelt. Aufruf in Pipes:
+#   tool ... 2>>"$LOG_FILE" | tee_ext "$SVC_NAME" >>"$LOG_FILE"
+# Ohne aktives Log (DRY_RUN) ist tee_ext ein reines >/dev/null.
+tee_ext() {
+  local svc="$1"
+  if [[ -z "${LOG_FILE:-}" ]]; then
+    cat >/dev/null
+    return 0
+  fi
+  while IFS= read -r line; do
+    printf '[%s] [EXT] %s: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$svc" "$line" >>"$LOG_FILE"
+  done
+}
+
 # --- Locking gegen Parallel-Laefte ---
 _acquire_lock() {
   local lockfile="/tmp/backup-dispatcher.lock"
@@ -274,9 +289,18 @@ rsync_backup() {
   else
     opts+=(--stats)
   fi
-  # rsync-Output (inkl. Fehlerdetails) ins Log — Exit-Code bleibt erhalten
-  rsync "${opts[@]}" "${excludes[@]}" "$src" "$dest" 2>>"${LOG_FILE:-/dev/null}" | tee -a "${LOG_FILE:-/dev/null}" >/dev/null
-  return ${PIPESTATUS[0]}
+  # rsync-Output (inkl. Fehlerdetails) praefixiert ins Log — Exit-Code bleibt erhalten
+  local errtmp=""
+  [[ -n "${LOG_FILE:-}" ]] && errtmp="$(mktemp)"
+  if [[ -n "$errtmp" ]]; then
+    rsync "${opts[@]}" "${excludes[@]}" "$src" "$dest" 2>"$errtmp" | tee_ext "rsync" >>"$LOG_FILE"
+    local rc=$?
+    [[ -s "$errtmp" ]] && tee_ext "rsync" <"$errtmp" >>"$LOG_FILE"
+    rm -f "$errtmp"
+    return $rc
+  fi
+  rsync "${opts[@]}" "${excludes[@]}" "$src" "$dest"
+  return $?
 }
 
 # --- Restic-Wrapper (optional zugeschaltet) ---
