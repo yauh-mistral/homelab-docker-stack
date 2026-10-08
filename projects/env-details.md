@@ -1,11 +1,21 @@
-# env-details — Erschöpfendes Variablen-Verzeichnis (Stand: v0.0.1)
+# env-details — Verbindliches Variablen-Verzeichnis (Stand: v0.0.1)
 
 Wahrheit für den Inhalt einer `.env` lebt **ausschließlich** auf dem Host in
 `/opt/docker/arcane/projects/<project>/.env`. Dieses Repo enthält nur
 `.env.example`-Dateien mit maskierten Werten und Anweisungen zur Herstellung.
 
+Grundsatz (verbindlich):
+- `.env`-Dateien werden **nie** mit ausgeliefert, immer nur `.env.example`.
+- Alle Environment-Variablen mit gleichem Purpose (Postgres-DB-User,
+  MariaDB-Passwort, JWT-Secret) heißen möglichst gleich, sofern der Service
+  es nicht zwingend individualisiert braucht. Die Namen in der `.env` sind
+  die **übergreifende Konvention**; die Compose-`environment:`-Namen dürfen
+  und sollen service-spezifisch sein (Compose mappt `.env`-Name → Service-Name).
+
 Dieses Dokument ist der verbindliche Katalog: Welche Variablen existieren,
-welche sind Secrets (rot = maskieren), und wie wird ein Wert erzeugt/geformatiert.
+welche sind Secrets (maskieren), und wie wird ein Wert erzeugt/geformatiert.
+Es ersetzt die frühere Inline-Liste (env-Details) und führt sie mit der
+Muster-Erkennung des Skripts zusammen.
 
 Kategorien:
 - **SECRET**   — Wert wird maskiert (`REPLACE_ME`), Herstellungsanweisung required
@@ -13,9 +23,42 @@ Kategorien:
 - **URL**      — Format-Anweisung (Schema, trailing slash, Trennzeichen bei Listen)
 - **PLAIN**    — unkritisch, bleibt im Beispiel stehen
 
-## 1. Secrets — immer maskieren (erschöpfend)
+## 1. Secrets — verbindliche Liste (aus env-Details, ergänzt um Muster-Erkennung)
 
-### Datenbank-Passwörter (Zugangsdaten, einheitlich pro DB-System)
+Bekannte Secret-Variablen aus den produktiven `.env`-Dateien (verbindlich):
+
+| Variable | Projekt(e) |
+|---|---|
+| `CRAWL4AI_API_TOKEN` | crawl4ai |
+| `KOMODO_DB_PASSWORD` | docker-gui |
+| `KOMODO_PASSKEY` | docker-gui |
+| `KOMODO_WEBHOOK_SECRET` | docker-gui |
+| `KOMODO_JWT_SECRET` | docker-gui |
+| `PERIPHERY_PASSKEYS` | docker-gui |
+| `FORGEJO_TOKEN` | forgejo |
+| `DB_PASSWORD` | ghost (App-User), immich, weitere |
+| `DB_ROOT_PASSWORD` | ghost (Backup/Dump als root) |
+| `ACTIVITYPUB_WEBHOOK_SECRET` | ghost |
+| `SMTP_PASSWORD` | übergreifend |
+| `POSTGRES_PASSWORD` | hardening, litellm, network, weitere |
+| `LITELLM_MASTER_KEY` | litellm |
+| `UI_PASSWORD` | litellm (UI-Login) |
+| `HERMES_M4PRO_KEY` | litellm (Garmin-Sync) |
+| `GF_SECURITY_ADMIN_PASSWORD` | monitoring (Grafana) |
+| `ADMIN_TOKEN` | vaultwarden |
+| `MEILI_MASTER_KEY` | open-notebook (Meilisearch) |
+| `POCKETBASE_ENCRYPTION_KEY` | wanderer |
+| `POCKETBASE_PROXY_SECRET` | wanderer |
+| `DESEC_TOKEN` | dnd (deSEC DNS) |
+
+Zusätzlich erkennt `make-env-examples.sh` per Namensmuster weitere
+Secret-artige Variablen (z. B. `N8N_ENCRYPTION_KEY`, `OPENAI_API_KEY`,
+`PAPERLESS_DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `WOPI_JWT_SECRET`,
+`BETTER_AUTH_SECRET`, `INITIAL_ADMIN_PASSWORD`) — die Muster-Liste ist eine
+**Obermenge**: Liebes nachtragen, was auf dem Host als Secret erkannt wird und
+hier fehlt, wird hier ergänzt und gilt dann als verbindlich.
+
+### Datenbank-Passwörter (Ziel-Konvention Schritt 2) (Zugangsdaten, einheitlich pro DB-System)
 | Projekt | Variable | Ziel-Konvention (Schritt 2) |
 |---|---|---|
 | castopod | `MYSQL_ROOT_PASSWORD` | `MARIADB_ROOT_PASSWORD` |
