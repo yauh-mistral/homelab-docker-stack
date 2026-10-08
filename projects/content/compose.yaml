@@ -16,22 +16,6 @@ services:
     networks:
       - shared_proxy
 
-  codex:
-    container_name: codex
-    image: docker.io/ajslater/codex
-    restart: on-failure
-    environment:
-      - TZ=${TZ}
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - VIRTUAL_PORT=${CODEX_PORT}
-      - VIRTUAL_HOST=${CODEX_DOMAIN}
-    volumes:
-      - /opt/docker/codex/config:/config
-      - /mnt/media/library/comics:/comics:ro
-    networks:
-      - shared_proxy
-
   5etools:
     container_name: 5etools
     image: jafner/5etools-docker

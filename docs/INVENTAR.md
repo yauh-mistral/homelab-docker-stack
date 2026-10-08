@@ -13,7 +13,7 @@ Stand: 2026-10-08 (Quellen: `projects/*/compose.yaml`, `projects/*/.env.example`
 
 ## Wichtig: Anzahl der Services
 
-Das Repository enthält **18 Compose-Stacks** (`projects/`), die zusammen **33 backup-relevante Services** ergeben (plus Hilfscontainer). Die Zuordnung „33 Services" wird wie folgt gebildet: die 30 Stacks, wobei `arr-stack` zu 7 eigenständigen Services (sonarr, lidarr, bazarr, radarr, prowlarr, sabnzbd, overseerr), `smarthome` zu 4 Services (homeassistant, music-assistant, mosquitto, matter-server) und `media` zu 6 Services (plex, tautulli, audiobookshelf, metube, calibre-web, tdarr), `content` zu 3 Services (homepage, codex, 5etools), `infra` zu 2 Services (omada-controller, crowdsec), `ai` zu 4 Services (litellm, crawl4ai, valkey, searxng) und `monitoring` zu 5 Services (dashdot, uptime-kuma, grafana, shynet-db, shynet-server) aufgeteilt wird; reine Netzwerk/Proxy-Helper (cert-Container) werden nicht als eigener Service gezählt. Details und Annahmen: siehe `docs/QUESTIONS.md`.
+Das Repository enthält **18 Compose-Stacks** (`projects/`), die zusammen **33 backup-relevante Services** ergeben (plus Hilfscontainer). Die Zuordnung „33 Services" wird wie folgt gebildet: die 30 Stacks, wobei `arr-stack` zu 7 eigenständigen Services (sonarr, lidarr, bazarr, radarr, prowlarr, sabnzbd, overseerr), `smarthome` zu 4 Services (homeassistant, music-assistant, mosquitto, matter-server) und `media` zu 7 Services (plex, tautulli, audiobookshelf, metube, calibre-web, codex, tdarr), `content` zu 2 Services (homepage, 5etools), `infra` zu 2 Services (omada-controller, crowdsec), `ai` zu 4 Services (litellm, crawl4ai, valkey, searxng) und `monitoring` zu 5 Services (dashdot, uptime-kuma, grafana, shynet-db, shynet-server) aufgeteilt wird; reine Netzwerk/Proxy-Helper (cert-Container) werden nicht als eigener Service gezählt. Details und Annahmen: siehe `docs/QUESTIONS.md`.
 
 ## Inventartabelle
 
@@ -28,7 +28,7 @@ Das Repository enthält **18 Compose-Stacks** (`projects/`), die zusammen **33 b
 | 7 | sabnzbd (arr-stack) | — (INI-Konfiguration) | `/opt/docker/sabnzbd`; `/opt/downloads/*` (Downloads, ignoriert) | Usenet-Downloader | 29M | Config-only (Stop-Fenster) |
 | 8 | overseerr (arr-stack) | SQLite in `/app/config` | `/opt/docker/overseerr` | Request-Manager | 8.3M | Config-only (Stop-Fenster) |
 | 9 | castopod (castopod) | MariaDB 11.2 (`castopod_mariadb`, `/opt/docker/castopod/mariadb`); Redis (Cache) | `/opt/docker/castopod/app/media` (Podcast-Media), `/opt/docker/castopod/redis` (Cache) | Podcast-Plattform | 2.3G (2.2G app, 167M mariadb) | DB-Dump + Datei-Rsync-Restic (app/media) |
-| 10 | codex (content) | — | `/opt/docker/codex/config`; `/mnt/media/library/comics` (Media, nur lesend, ignoriert) | Comic-Reader | 20M | Config-only |
+| 10 | codex (media) | — | `/opt/docker/codex/config`; `/mnt/media/library/comics` (Media, nur lesend, ignoriert) | Comic-Reader | 20M | Config-only |
 | 11 | crawl4ai (ai) | — | keine persistenten Bind-Mounts | Crawler | — | ignorieren |
 | 12 | 5etools (content) | — | `/opt/docker/5etools` (statische Site) | Statische Website | 6.9G (6.8G img) | Config-only (Datei-Rsync-Restic, statisch) |
 | 14 | firecrawl (firecrawl) | Redis (Queue/Crawl-State) | Named Volume `redis-data` (kein Bind-Mount) | Crawler-API | n/a | ignorieren (Queue-Status reproduzierbar) |
