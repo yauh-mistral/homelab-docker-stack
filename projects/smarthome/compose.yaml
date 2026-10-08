@@ -12,8 +12,8 @@ services:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - VIRTUAL_HOST=hass.meine-domain.de
-      - VIRTUAL_PORT=8123
+      - VIRTUAL_HOST=${HASS_DOMAIN}
+      - VIRTUAL_PORT=${HASS_PORT}
     volumes:
       - /opt/docker/homeassistant:/config
       - /run/dbus:/run/dbus:ro
@@ -37,8 +37,8 @@ services:
     privileged: false
     environment:
       - TZ=${TZ}
-      - VIRTUAL_HOST=mass.meine-domain.de
-      - VIRTUAL_PORT=8095
+      - VIRTUAL_HOST=${MASS_DOMAIN}
+      - VIRTUAL_PORT=${MASS_PORT}
     volumes:
       - /opt/docker/music-assistant:/data
       - /mnt/media/music/lidarr/:/media:ro

@@ -8,10 +8,10 @@ services:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - VERSION=docker
-      - VIRTUAL_HOST=plex.meine-domain.de
-      - VIRTUAL_PORT=32400
-      - NETWORK_ACCESS=external
+      - VERSION=${PLEX_VERSION}
+      - VIRTUAL_HOST=${PLEX_DOMAIN}
+      - VIRTUAL_PORT=${PLEX_PORT}
+      - NETWORK_ACCESS=${PLEX_NETWORK_ACCESS}
       - PLEX_CLAIM=${PLEX_CLAIM}
     volumes:
       - /opt/docker/plex/conf:/config
@@ -32,7 +32,7 @@ services:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - VIRTUAL_HOST=tautulli.meine-domain.de
+      - VIRTUAL_HOST=${TAUTULLI_DOMAIN}
     volumes:
       - /opt/docker/tautulli:/config:rw
     networks:
@@ -45,7 +45,7 @@ services:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - VIRTUAL_HOST=audiobooks.meine-domain.de
+      - VIRTUAL_HOST=${AUDIOBOOKSHELF_DOMAIN}
     volumes:
       - /mnt/media/audiobooks/audiobooks:/audiobooks
       - /mnt/media/audiobooks/podcasts:/podcasts
@@ -63,7 +63,7 @@ services:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - VIRTUAL_HOST=metube.meine-domain.de
+      - VIRTUAL_HOST=${METUBE_DOMAIN}
     volumes:
       - /mnt/media/video/youtube:/downloads
     networks:
@@ -78,9 +78,9 @@ services:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - DOCKER_MODS=linuxserver/mods:universal-calibre #optional
-      - OAUTHLIB_RELAX_TOKEN_SCOPE=1 #optional
-      - VIRTUAL_HOST=calibre.meine-domain.de
+      - DOCKER_MODS=${CALIBRE_WEB_DOCKER_MODS} #optional
+      - OAUTHLIB_RELAX_TOKEN_SCOPE=${CALIBRE_WEB_OAUTHLIB_RELAX_TOKEN_SCOPE} #optional
+      - VIRTUAL_HOST=${CALIBRE_WEB_DOMAIN}
     volumes:
       - /opt/docker/calibre-web:/config
       - /mnt/media/library/calibre:/books

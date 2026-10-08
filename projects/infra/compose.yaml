@@ -7,9 +7,9 @@ services:
       - no-new-privileges:true
     environment:
       - TZ=${TZ}
-      - VIRTUAL_HOST=omada.meine-domain.de
-      - VIRTUAL_PORT=8043
-      - VIRTUAL_PROTO=https
+      - VIRTUAL_HOST=${OMADA_DOMAIN}
+      - VIRTUAL_PORT=${OMADA_PORT}
+      - VIRTUAL_PROTO=${OMADA_PROTO}
     volumes:
       - /opt/docker/omada/work:/opt/tplink/EAPController/work:rw
       - /opt/docker/omada/logs:/opt/tplink/EAPController/logs:rw
@@ -38,7 +38,7 @@ services:
     image: crowdsecurity/crowdsec:latest
     restart: unless-stopped
     environment:
-      - COLLECTIONS=crowdsecurity/nginx crowdsecurity/sshd crowdsecurity/linux
+      - COLLECTIONS=${CROWDSEC_COLLECTIONS}
     volumes:
       - /opt/docker/crowdsec/config:/etc/crowdsec
       - /opt/docker/crowdsec/data:/var/lib/crowdsec/data

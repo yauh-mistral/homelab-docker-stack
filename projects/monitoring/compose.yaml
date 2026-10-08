@@ -9,7 +9,7 @@ services:
       - no-new-privileges:true
     environment:
       - VIRTUAL_HOST=${DASHDOT_HOST}
-      - VIRTUAL_PORT=3001
+      - VIRTUAL_PORT=${DASHDOT_PORT}
       - DASHDOT_ENABLE_CPU_TEMPS=${DASHDOT_ENABLE_CPU_TEMPS}
     volumes:
       - /proc/1/ns/net:/mnt/host_ns_net:ro
@@ -30,7 +30,7 @@ services:
     environment:
       - TZ=${TZ}
       - VIRTUAL_HOST=${KUMA_HOST}
-      - VIRTUAL_PORT=3001
+      - VIRTUAL_PORT=${KUMA_PORT}
     volumes:
       - ${KUMA_BASE_PATH}:/app/data:rw
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -49,7 +49,7 @@ services:
     environment:
       - TZ=${TZ}
       - VIRTUAL_HOST=${GRAFANA_HOST}
-      - VIRTUAL_PORT=3000
+      - VIRTUAL_PORT=${GRAFANA_PORT}
     volumes:
       - ${GRAFANA_BASE_PATH}/data:/var/lib/grafana
       - ${GRAFANA_BASE_PATH}/logs:/var/log/grafana
@@ -97,8 +97,8 @@ services:
 
       # Proxy Configuration for Nginx-Proxy
       - VIRTUAL_HOST=${SHYNET_HOST}
-      - VIRTUAL_PORT=8080
-      - DJANGO_SECURE_PROXY_SSL_HEADER=True
+      - VIRTUAL_PORT=${SHYNET_PORT}
+      - DJANGO_SECURE_PROXY_SSL_HEADER=${SHYNET_DJANGO_SECURE_PROXY_SSL_HEADER}
       - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}
       #- LETSENCRYPT_CHALLENGE=dns
       # Database Connection (using the internal Docker network name)
@@ -110,7 +110,7 @@ services:
 
       # Hostnames allowed by Django for security
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
-      - SECURE_PROXY_SSL_HEADER=HTTP_X_FORWARDED_PROTO,https
+      - SECURE_PROXY_SSL_HEADER=${SHYNET_SECURE_PROXY_SSL_HEADER}
 
       # Email setup (Recommended for admin access/alerts)
       - SERVER_EMAIL=Shynet <${SMTP_SENDER}>
@@ -119,7 +119,7 @@ services:
       - EMAIL_PORT=${SMTP_PORT}
       - EMAIL_HOST_USER=${SMTP_USER}
       - EMAIL_HOST_PASSWORD=${SMTP_PASSWORD}
-      - EMAIL_USE_SSL=True
+      - EMAIL_USE_SSL=${SHYNET_EMAIL_USE_SSL}
 
 
     volumes:

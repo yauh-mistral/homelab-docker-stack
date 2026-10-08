@@ -9,7 +9,7 @@ services:
     restart: unless-stopped
     environment:
       <<: *cenv
-      MEILI_NO_ANALYTICS: "true"
+      MEILI_NO_ANALYTICS: "${MEILI_NO_ANALYTICS}"
     volumes:
       - /opt/docker/wanderer/search:/meili_data/data.ms
     healthcheck:
@@ -67,7 +67,7 @@ services:
       NOMINATIM_URL: ${NOMINATIM_URL}
       PUBLIC_MAP_MAX_POLYLINES: ${PUBLIC_MAP_MAX_POLYLINES}
       VIRTUAL_HOST: ${WANDERER_DOMAIN},www.${WANDERER_DOMAIN}
-      VIRTUAL_PORT: 3000
+      VIRTUAL_PORT: ${WANDERER_PORT}
     volumes:
       - /opt/docker/wanderer/uploads:/app/uploads
     expose:

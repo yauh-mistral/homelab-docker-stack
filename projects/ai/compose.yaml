@@ -36,8 +36,8 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - VIRTUAL_HOST=${LITELLM_DOMAIN}
-      - VIRTUAL_PORT=4000
-      - LITELLM_DISABLE_NO_REDIS_WARNING=true
+      - VIRTUAL_PORT=${LITELLM_PORT}
+      - LITELLM_DISABLE_NO_REDIS_WARNING=${LITELLM_DISABLE_NO_REDIS_WARNING}
     volumes:
       - /opt/docker/litellm/config.yaml:/app/config.yaml
       - /etc/timezone:/etc/timezone:ro
@@ -51,9 +51,9 @@ services:
     image: unclecode/crawl4ai:latest
     restart: unless-stopped
     environment:
-      - VIRTUAL_HOST=crawl4ai.meine-domain.de
-      - VIRTUAL_PORT=11235
-      - TZ=Europe/Berlin
+      - VIRTUAL_HOST=${CRAWL4AI_DOMAIN}
+      - VIRTUAL_PORT=${CRAWL4AI_PORT}
+      - TZ=${TZ}
       - CRAWL4AI_API_TOKEN=${CRAWL4AI_API_TOKEN:-}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11235/health"]
@@ -92,8 +92,8 @@ services:
     environment:
       - SEARXNG_BASE_URL=https://${SEARXNG_HOSTNAME:-localhost}/
       - VIRTUAL_HOST=${SEARXNG_HOSTNAME}
-      - VIRTUAL_PORT=8080
-      - TZ=Europe/Berlin
+      - VIRTUAL_PORT=${SEARXNG_PORT}
+      - TZ=${TZ}
     volumes:
       - /opt/docker/searxng/etc/searchnxg:/etc/searxng:rw
       - /opt/docker/searxng/data:/var/cache/searxng:rw

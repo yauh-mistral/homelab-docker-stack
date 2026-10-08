@@ -7,7 +7,7 @@ services:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - VIRTUAL_HOST=sonarr.meine-domain.de
+      - VIRTUAL_HOST=${SONARR_DOMAIN}
     volumes:
       - /opt/docker/sonarr:/config
       - /mnt/media/video/tv:/tv
@@ -22,7 +22,7 @@ services:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - VIRTUAL_HOST=lidarr.meine-domain.de
+      - VIRTUAL_HOST=${LIDARR_DOMAIN}
     volumes:
       - /opt/docker/lidarr:/config
       - /mnt/media/music/lidarr:/music
@@ -39,7 +39,7 @@ services:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - VIRTUAL_HOST=bazarr.meine-domain.de
+      - VIRTUAL_HOST=${BAZARR_DOMAIN}
     volumes:
       - /mnt/media/video/tv:/tv:rw
       - /mnt/media/video/movies:/movies:rw
@@ -60,7 +60,7 @@ services:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - VIRTUAL_HOST=radarr.meine-domain.de
+      - VIRTUAL_HOST=${RADARR_DOMAIN}
     volumes:
       - /opt/docker/radarr:/config:rw
       - /opt/downloads/completed:/downloads:rw
@@ -75,7 +75,7 @@ services:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - VIRTUAL_HOST=prowlarr.meine-domain.de
+      - VIRTUAL_HOST=${PROWLARR_DOMAIN}
     volumes:
       - /opt/docker/prowlarr:/config
     networks:
@@ -88,7 +88,7 @@ services:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - VIRTUAL_HOST=sabnzb.meine-domain.de
+      - VIRTUAL_HOST=${SABNZBD_DOMAIN}
     volumes:
       - /opt/docker/sabnzbd:/config
       - /opt/downloads/completed:/downloads #optional
@@ -103,7 +103,7 @@ services:
       - TZ=${TZ}
       - PUID=${PUID}
       - PGID=${PGID}
-      - VIRTUAL_HOST=overseerr.meine-domain.de
+      - VIRTUAL_HOST=${OVERSEERR_DOMAIN}
     volumes:
       - /opt/docker/overseerr:/app/config # Contains all relevant configuration files.
 
