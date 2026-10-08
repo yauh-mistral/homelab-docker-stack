@@ -1,4 +1,4 @@
-# env-details — Verbindliches Variablen-Verzeichnis (Stand: v0.0.1)
+# env-details — Verbindliches Variablen-Verzeichnis
 
 Wahrheit für den Inhalt einer `.env` lebt **ausschließlich** auf dem Host in
 `/opt/docker/arcane/projects/<project>/.env`. Dieses Repo enthält nur
