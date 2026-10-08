@@ -38,7 +38,6 @@ Das Repository enthält **18 Compose-Stacks** (`projects/`), die zusammen **33 b
 | 18 | homepage (content) | — | `/opt/docker/homepage` (YAML-Konfiguration) | Dashboard | 68K | Config-only |
 | 19 | immich (immich) | PostgreSQL 14 (`immich_postgres`, `/opt/docker/immich/postgres`) | `/mnt/immich` (UPLOAD_LOCATION — Fotos/Videos) | Foto-Management | n/a (NAS-Pfad; DB-dir 8K) | DB-Dump (pg_dump) + Datei-Rsync-Restic (/mnt/immich) |
 | 20 | litellm (ai) | PostgreSQL 16 (`litellm_db`, `/opt/docker/litellm/postgres_data`) | `/opt/docker/litellm/config.yaml` (Config-Datei) | LLM-Proxy | 12K | DB-Dump + Config-only |
-| 21 | mealie (mealie) | SQLite in `/app/data` (Standard-Setup; `/opt/docker/mealie/data`) | `/opt/docker/mealie/data` | Rezepte | 34M | Config-only (Stop-Fenster oder Mealie-Backup-API) |
 | 22 | plex (media) | — (DBs in `/config`) | `/opt/docker/plex/conf`; `/mnt/media/**` (Media, ignoriert) | Mediaserver | 53G (conf) | Config-only |
 | 23 | tautulli (media) | SQLite (`tautulli.db` in `/config`) | `/opt/docker/tautulli`; `/mnt/media/**` (ignoriert) | Plex-Stats | 1.1G (897M cache!) | Config-only (Stop-Fenster; cache ausschließen) |
 | 24 | audiobookshelf (media) | SQLite in `/config` | `/opt/docker/audiobookshelf/config`, `/opt/docker/audiobookshelf/metadata`; `/mnt/media/audiobooks` (Media, ignoriert) | Hörbuch-Server | 45G (45G metadata!) | Config-only (Stop-Fenster) — metadata prüfen (siehe QUESTIONS) |

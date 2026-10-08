@@ -77,10 +77,6 @@ Compose referenziert nur LITELLM_*, POSTGRES_*, UI_*, OpenAI/Anthropic/OpenRoute
 `HERMES_M4PRO_KEY` (Garmin-Sync-Secret) wird nirgends durchgereicht. Entweder
 ✂️ oder Compose ergänzen, falls der Hermes-Container den braucht.
 
-### mealie (SMTP_SENDER: ✂️)
-Compose nutzt `SMTP_FROM` als From-Email; `SMTP_SENDER` wird nicht referenziert
-(Mailie kennt SMTP_FROM_NAME etc.). ✂️ Duplikat.
-
 ### analytics-1 (SHYNET_PORT, CERT_EMAIL, SHYNET_BASE_PATH, SMTP_FROM: ⚠️/✂️)
 `SHYNET_PORT` ✂️ (VIRTUAL_PORT hartcodiert 8080), `CERT_EMAIL` ✂️ (ACME-Cert
 läuft über web-proxy-Stack, dort eigenes ACME_DEFAULT_EMAIL), `SHYNET_BASE_PATH`
