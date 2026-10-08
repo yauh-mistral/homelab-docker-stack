@@ -18,7 +18,7 @@ services:
       retries: 5
 
     networks:
-      - ai_net
+      - local_ai_net
   litellm:
     container_name: litellm
     image: ghcr.io/berriai/litellm:main-latest
@@ -43,7 +43,7 @@ services:
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     networks:
-      - ai_net
+      - local_ai_net
       - shared_proxy
 
   crawl4ai:
@@ -63,7 +63,7 @@ services:
       start_period: 20s
 
     networks:
-      - ai_net
+      - local_ai_net
       - shared_proxy
     shm_size: '2gb'
 
@@ -76,7 +76,7 @@ services:
     volumes:
       - /opt/docker/valkey/:/data
     networks:
-      - ai_net
+      - local_ai_net
     logging:
       driver: "json-file"
       options:
@@ -98,7 +98,7 @@ services:
       - /opt/docker/searxng/etc/searchnxg:/etc/searxng:rw
       - /opt/docker/searxng/data:/var/cache/searxng:rw
     networks:
-      - ai_net
+      - local_ai_net
       - shared_proxy
     logging:
       driver: "json-file"
@@ -107,7 +107,7 @@ services:
         max-file: "1"
 
 networks:
-  ai_net:
+  local_ai_net:
     driver: bridge
   shared_proxy:
     external: true
