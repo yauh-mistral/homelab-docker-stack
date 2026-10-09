@@ -9,7 +9,7 @@ Anleitung, um das Backup-System auf dem Ubuntu-Docker-Host in Betrieb zu nehmen 
 └── projects/<stack>/compose.yaml + .env
 
 /opt/docker/tools/                Heimat aller Host-Tools (die INSTALLATION)
-├── backup/                    Backup-System (installiert via tools/backup/install.sh)
+├── backup/                    Backup-System (installiert via tools/install.sh)
 │   ├── backup.sh                  Dispatcher
 │   ├── restore.sh                 Restore pro Service
 │   ├── test-restore.sh            Dump-Restore-Test
@@ -64,15 +64,16 @@ Alle **anderen** Stacks werden als Projekte von Arcane verwaltet (`/opt/docker/a
 ```bash
 cd /opt/docker/arcane
 sudo git pull
-sudo tools/backup/install.sh \
-  --home /opt/docker/tools/backup \
+sudo tools/install.sh \
+  --home /opt/docker/tools \
   --stacks-dir /opt/docker/arcane/projects \
   --backup-root /mnt/systems/backups/&lt;host&gt;
 ```
 
 Der Installer:
-1. kopiert `backup.sh`, `restore.sh`, `test-restore.sh`, `lib/`, `policies.d/`, `policy.conf` (und `docs/`) nach `/opt/docker/tools/backup`
-2. erzeugt `/etc/backup.conf` (mit `chmod 600`) bzw. ergänzt fehlende Einträge in einer bestehenden Datei
+1. kopiert `backup.sh`, `restore.sh`, `test-restore.sh`, `lib/`, `policies.d/`, `policy.conf` nach `/opt/docker/tools/backup`
+2. kopiert `maintenance/` nach `/opt/docker/tools/maintenance` und `docs/` nach `/opt/docker/tools/docs`
+3. erzeugt `/etc/backup.conf` (mit `chmod 600`) bzw. ergänzt fehlende Einträge in einer bestehenden Datei
 
 Alternativ ohne Parameter — der Installer fragt interaktiv nach dem Quellpfad.
 
@@ -178,7 +179,7 @@ sudo sh -c 'openssl rand -base64 32 > /etc/restic-password && chmod 600 /etc/res
 Repo-Änderungen (neue Deklarationen, Fixes) einspielen:
 ```bash
 cd /opt/docker/arcane && sudo git pull
-sudo tools/backup/install.sh --stacks-dir /opt/docker/arcane/projects --backup-root /mnt/systems/backups/&lt;host&gt;
+sudo tools/install.sh --stacks-dir /opt/docker/arcane/projects --backup-root /mnt/systems/backups/&lt;host&gt;
 ```
 `install.sh` aktualisiert die Installation (rsync ohne `--delete`: lokal angepasste Deklarationen bleiben erhalten).
 

@@ -82,7 +82,7 @@ Details: [`docs/BACKUP-STRATEGIE.md`](docs/BACKUP-STRATEGIE.md) · [`docs/RESTOR
 ```bash
 # Backup-System installieren (aus dem Repo-Klon!)
 cd /opt/docker/arcane && sudo git pull
-sudo tools/backup/install.sh --home /opt/docker/tools/backup \
+sudo tools/install.sh --home /opt/docker/tools \
      --stacks-dir /opt/docker/arcane/projects \
      --backup-root /mnt/systems/&lt;host&gt;/backups
 
@@ -114,6 +114,7 @@ arcane-docker-stack/
 │   ├── immich/
 │   └── ...
 ├── tools/
+│   ├── install.sh
 │   ├── backup/
 │   └── maintenance/
 ├── bootstrap/
@@ -122,7 +123,7 @@ arcane-docker-stack/
 ```
 
 - **projects/** — je Stack ein Verzeichnis (`compose.yaml`, optional `.env.example`), plus `env-details.md` (Secret-/Format-Konventionen)
-- **tools/** — Host-Tools (Installer: `tools/backup/install.sh` → `/opt/docker/tools/`): `backup/` (Backup-System), `maintenance/` (Docker-Pflege)
+- **tools/** — Host-Tools (Installer: `tools/install.sh` → `/opt/docker/tools/`): `backup/` (Backup-System), `maintenance/` (Docker-Pflege)
 - **bootstrap/** — Compose-File für den Arcane-Bootstrap (nicht Teil des Installers — enthält Secrets, von Hand zu pflegen; Host: `/opt/docker/compose/compose.yml`)
 - **docs/** — In-depth-Dokumentation
 
