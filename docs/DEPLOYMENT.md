@@ -78,7 +78,7 @@ USE_RESTIC=false
 ```bash
 sudo /opt/docker/backup/backup.sh --dry-run
 ```
-Erwartung: pro Service `[DRY]`-Zeilen mit exakten `docker exec`/rsync-Befehlen, am Ende `OK=40 FAIL=0 SKIP=3`. `WARN` zu fehlenden Pfaden = Abweichung zwischen Deklaration und Host — prüfen oder als dokumentierte Lücke akzeptieren (`docs/QUESTIONS.md`).
+Erwartung: pro Service `[DRY]`-Zeilen mit exakten `docker exec`/rsync-Befehlen, am Ende `OK=40 FAIL=0 SKIP=3`. `WARN` zu fehlenden Pfaden = Abweichung zwischen Deklaration und Host — prüfen oder als dokumentierte Lücke akzeptieren (`docs/TODOS.md`).
 
 ## Schritt 5: Begrenzter erster echter Lauf
 
@@ -122,7 +122,7 @@ sudo crontab -e
 30 2 * * * /opt/docker/backup/backup.sh >> /mnt/systems/backups/ovi/_meta/cron.log 2>&1
 0 3 * * 0 /opt/docker/backup/backup.sh --only-config >> /mnt/systems/backups/ovi/_meta/cron.log 2>&1
 ```
-`flock` ist im Dispatcher eingebaut (parallele Läufe blockiert). Nach dem Testrun Cron-Zeiten gegen die tatsächliche Laufzeit prüfen (große rsync-Ziele wie `/mnt/immich` — ggf. Immich-Dateianteil wöchentlich, QUESTIONS.md #13).
+`flock` ist im Dispatcher eingebaut (parallele Läufe blockiert). Nach dem Testrun Cron-Zeiten gegen die tatsächliche Laufzeit prüfen (große rsync-Ziele wie `/mnt/immich` — ggf. Immich-Dateianteil wöchentlich, TODOS.md #13).
 
 ## Versionierung & Retention (rsnapshot-Stil)
 

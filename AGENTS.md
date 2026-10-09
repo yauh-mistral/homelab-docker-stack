@@ -4,14 +4,14 @@
 
 - Dieses Repo umfasst die **gesamte Docker-Landschaft des Hosts**: Compose-Stacks (`projects/`), das Backup-System (`backup/`) und die In-depth-Doku (`docs/`). Kernstück ist **Arcane** als Verwaltungsoberfläche, unter der alle Stacks als Projekte laufen.
 - **README.md** = Überblick: Komponenten, Stacks, Zusammenhänge (inkl. Mermaid-Diagramm), Kurzfassungen mit Link auf docs/. **Keine Schritt-für-Schritt-Anleitungen im README.**
-- **docs/** = In-depth: DEPLOYMENT.md (Installation/Inbetriebnahme/Cron), BACKUP-STRATEGIE.md (Strategie/Policy-Referenz), RESTORE.md (Restore), INVENTAR.md (Service-Inventar), QUESTIONS.md (Annahmen/offene Punkte).
+- **docs/** = In-depth: DEPLOYMENT.md (Installation/Inbetriebnahme/Cron), BACKUP-STRATEGIE.md (Strategie/Policy-Referenz), RESTORE.md (Restore), INVENTAR.md (Service-Inventar), TODOS.md (offene Todos/entscheidene Annahmen).
 - **Redundanz-Regel**: Jedes Thema hat genau eine ausführliche Heimat; das andere verlinkt mit Kurzfassung. Nie Inhalte doppelt pflegen — bei Änderungen beide Stellen prüfen oder die Kurzfassung bewusst generisch halten.
 
 ## Docker-Projects-Thematik (projects/)
 
 - **Stack-Anlage**: Jeder Stack liegt in `projects/<stack>/` mit `compose.yaml` (+ optionalem `.env.example`). Keine `.env` im Repo (siehe .env-Konventionen unten).
 - **Arcane als Verwaltung**: Stacks werden als Projekte in Arcane verwaltet. Das Repo ist die Deklarationsquelle; der Deploy-Status entscheidet sich zur Laufzeit (Discovery nutzt `docker ps`, nicht das Repo).
-- **Service hinzufügen/entfernen**: compose.yaml im Stack anpassen (oder neuen Stack anlegen), `.env.example` mit `make-env-examples.sh` pflegen, auf dem Host die echte `.env` befüllen, dann `docker compose up -d`. Entfernte Services muss der Backup-Dispatcher unbeeindruckt verkraften (SKIP).
+- **Service hinzufügen/entfernen**: compose.yaml im Stack anpassen (oder neuen Stack anlegen), `.env.example` pflegen, auf dem Host die echte `.env` befüllen, dann `docker compose up -d`. Entfernte Services muss der Backup-Dispatcher unbeeindruckt verkraften (SKIP).
 - **Bind-Mount-Konvention**: Nutzdaten unter `/opt/docker/<service>/`. Docker Volumes nie für zu sichernde Daten. NAS-Mounts (`/mnt/...`) nie als Backup-Quelle.
 - **Backup-Anbindung**: Neue Services mit laufender DB oder Mounts werden vom Auto-Discovery automatisch erkannt und gesichert. Nur bei Besonderheiten (rebuildbare Daten, Caches, DB-Tool-Anpassungen) eine Policy in `backup/policies.d/` anlegen — mit Begründungskommentar, damit die Ausnahme später nachvollziehbar bleibt.
 
@@ -34,7 +34,7 @@
 - **Phase 1 (aktuell): Einfrieren bei v1.0.0 + Build-Nummer.** Bis der erste vollständige Ende-zu-Ende-Test erfolgreich durchgelaufen ist (Discovery → Dry-Run → echter Lauf → `test-restore.sh --all` alles grün), bleibt `SCRIPT_VERSION` bei v1.0.0. Der Patch-Level wird über `SCRIPT_BUILD` (PR-Nummer) erkannt: Log zeigt `v1.0.0+#<PR> <stamp>`.
 - **Phase 2 (nach E2E-Erfolg): Semantic Versioning Mode.** Sobald der E2E-Test komplett grün ist, wird auf SemVer umgestellt: MAJOR = Breaking (Config/Deklarationsformat/CLI), MINOR = Feature, PATCH = Fix. Der Übergang selbst ist ein User-Entscheid, nicht automatisch.
 - **`SCRIPT_BUILD`** (PR-Nummer) wird von der GitHub Action `.github/workflows/build-number.yml` nach jedem Merge automatisch nachgetragen (liest `(#N)` aus dem Merge-Commit-Subject). Manuelle Pflege entfällt.
-- `SCRIPT_VERSION` gilt **nur** für `backup/`, `restore.sh`, `install.sh` — Hilfsskripte (z. B. `make-env-examples.sh`) bekommen **keine** Versionsnummer.
+- `SCRIPT_VERSION` gilt **nur** für `backup/`, `restore.sh`, `install.sh` — Hilfsskripte bekommen **keine** Versionsnummer.
 - `install.sh` stempelt die installierte Kopie mit Installationszeitpunkt (`INSTALL_STAMP`, `YYYY-MM-DD HH:MM`) und `SCRIPT_BUILD`. Jedes Log beginnt mit der Versionszeile (`vX.Y.Z+#<PR> <stamp>`) — veraltete Stände sofort erkennbar.
 
 ## .env-Konventionen
