@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# install.sh — Installiert alle Host-Tools (backup + maintenance) nach /opt/docker/tools,
-# unabhaengig vom Repo. Quelle (Compose-Stacks + .env) und Ziel (NAS) werden in
-# /etc/backup.conf konfiguriert, nicht im Code.
-# Bootstrap (bootstrap/compose.yml fuer Arcane) wird BEWUSST NICHT installiert:
-# Die Compose enthaelt Secrets und wird von Hand gepflegt (siehe docs/DEPLOYMENT.md).
+# install.sh — Installs all host tools (backup + maintenance) to /opt/docker/tools,
+# independent of the repo. Source (compose stacks + .env) and target (NAS) are
+# configured in /etc/backup.conf, not in the code.
+# The bootstrap (bootstrap/compose.yml for Arcane) is DELIBERATELY NOT installed:
+# the compose file contains secrets and is maintained by hand (see docs/DEPLOYMENT.md).
 #
 # Usage:
-#   tools/install.sh [--home /opt/docker/tools] [--stacks-dir /pfad/zu/projects] [--backup-root /mnt/systems/backups/<host>]
+#   tools/install.sh [--home /opt/docker/tools] [--stacks-dir /path/to/projects] [--backup-root /mnt/systems/backups/<host>]
 #
 set -u
 set -o pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Version und Build (PR-Nummer) zum Installationszeitpunkt aus lib/common.sh uebernehmen
+# Read version and build (PR number) at installation time from lib/common.sh
 LIB_VERSION="$(grep -m1 '^SCRIPT_VERSION=' "$SCRIPT_DIR/backup/lib/common.sh" | cut -d= -f2 | tr -d '"')"
 LIB_BUILD="$(grep -m1 '^SCRIPT_BUILD=' "$SCRIPT_DIR/backup/lib/common.sh" | cut -d= -f2 | tr -d '"')"
 INSTALL_STAMP="$(date '+%Y-%m-%d %H:%M')"
@@ -27,34 +27,34 @@ CONF_FILE="/etc/backup.conf"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --home)        shift; TOOLS_HOME="${1:?--home braucht Pfad}"; INSTALL_HOME="$TOOLS_HOME/backup"; MAINT_HOME="$TOOLS_HOME/maintenance" ;;
-    --stacks-dir)  shift; STACKS_DIR="${1:?--stacks-dir braucht Pfad}" ;;
-    --backup-root) shift; BACKUP_ROOT="${1:?--backup-root braucht Pfad}" ;;
+    --home)        shift; TOOLS_HOME="${1:?--home requires a path}"; INSTALL_HOME="$TOOLS_HOME/backup"; MAINT_HOME="$TOOLS_HOME/maintenance" ;;
+    --stacks-dir)  shift; STACKS_DIR="${1:?--stacks-dir requires a path}" ;;
+    --backup-root) shift; BACKUP_ROOT="${1:?--backup-root requires a path}" ;;
     -h|--help)     sed -n '2,9p' "$0"; exit 0 ;;
-    *) echo "Unbekannte Option: $1" >&2; exit 2 ;;
+    *) echo "Unknown option: $1" >&2; exit 2 ;;
   esac
   shift
 done
 
-echo "== Backup-System-Installation =="
-echo "Heimat:      $TOOLS_HOME (backup + maintenance)"
-echo "Quelle:      ${STACKS_DIR:-<nachfragen>}"
-echo "Ziel (NAS):  $BACKUP_ROOT"
-echo "Konfig:      $CONF_FILE"
+echo "== Backup system installation =="
+echo "Home:        $TOOLS_HOME (backup + maintenance)"
+echo "Source:      ${STACKS_DIR:-<interactive prompt>}"
+echo "Target (NAS): $BACKUP_ROOT"
+echo "Config:      $CONF_FILE"
 echo
 
-# --- Eingaben validieren / erfragen ---
+# --- Validate / prompt for inputs ---
 if [[ -z "$STACKS_DIR" ]]; then
-  read -r -p "Pfad zu den Compose-Stacks (projects/, enthaelt die .env-Dateien): " STACKS_DIR
+  read -r -p "Path to the compose stacks (projects/, contains the .env files): " STACKS_DIR
 fi
-[[ -d "$STACKS_DIR" ]] || { echo "FEHLER: Quellverzeichnis existiert nicht: $STACKS_DIR" >&2; exit 1; }
+[[ -d "$STACKS_DIR" ]] || { echo "ERROR: source directory does not exist: $STACKS_DIR" >&2; exit 1; }
 [[ -f "$STACKS_DIR/ghost/compose.yaml" || -f "$STACKS_DIR/ghost/docker-compose.yml" ]] \
-  || echo "WARNUNG: $STACKS_DIR sieht nicht nach dem projects/-Verzeichnis aus (kein ghost-Stack gefunden) — trotzdem fortgesetzt."
+  || echo "WARNING: $STACKS_DIR does not look like the projects/ directory (no ghost stack found) — continuing anyway."
 
-# --- Heimat anlegen ---
-mkdir -p "$INSTALL_HOME" "$MAINT_HOME" || { echo "FEHLER: Kann $TOOLS_HOME nicht anlegen" >&2; exit 1; }
+# --- Create the target directories ---
+mkdir -p "$INSTALL_HOME" "$MAINT_HOME" || { echo "ERROR: cannot create $TOOLS_HOME" >&2; exit 1; }
 
-# --- Dateien kopieren (idempotent; rsync wenn verfuegbar, sonst cp-Fallback) ---
+# --- Copy files (idempotent; rsync if available, cp fallback otherwise) ---
 copy_file() {
   local src="$1" dest="$2"
   mkdir -p "$dest"
@@ -74,8 +74,8 @@ copy_tree() {
   else
     cp -a "$src/." "$dest/"
     if [[ "$mirror" == "true" ]]; then
-      echo "WARNUNG: rsync nicht verfuegbar — --delete (Mirror) uebersprungen." >&2
-      echo "         Bitte $dest manuell mit dem Repo-Stand abgleichen." >&2
+      echo "WARNING: rsync not available — --delete (mirror) skipped." >&2
+      echo "         Please reconcile $dest with the repo state manually." >&2
     fi
   fi
 }
@@ -87,71 +87,71 @@ copy_tree "$SCRIPT_DIR/backup/policies.d" "$INSTALL_HOME/policies.d" true
 copy_file "$SCRIPT_DIR/backup/policy.conf" "$INSTALL_HOME/"
 chmod +x "$INSTALL_HOME"/*.sh
 
-# --- Maintenance-Tool mitinstallieren (gleiche Tools-Heimat, kein Bootstrap!) ---
+# --- Also install the maintenance tool (same tools home, no bootstrap!) ---
 if [[ -d "$SCRIPT_DIR/maintenance" ]]; then
   copy_tree "$SCRIPT_DIR/maintenance" "$MAINT_HOME" true
   chmod +x "$MAINT_HOME"/*.sh
-  echo "Kopiert: maintenance -> $MAINT_HOME"
+  echo "Copied: maintenance -> $MAINT_HOME"
 else
-  echo "WARNUNG: ../maintenance nicht gefunden — Maintenance-Tool uebersprungen." >&2
+  echo "WARNING: ../maintenance not found — maintenance tool skipped." >&2
 fi
 
-# Installationszeitpunkt und Build (PR-Nummer) in die installierte Kopie von
-# lib/common.sh schreiben, damit jedes Backup-/Restore-Log Version + Patch-Level +
-# Install-Zeit ausweist.
+# Write the installation time and build (PR number) into the installed copy of
+# lib/common.sh so that every backup/restore log reports version + patch level +
+# install time.
 sed -i "s|^INSTALL_STAMP=\"\${INSTALL_STAMP:-.*}\"|INSTALL_STAMP=\"$INSTALL_STAMP\"|" \
   "$INSTALL_HOME/lib/common.sh" || true
 sed -i "s|^SCRIPT_BUILD=\"\${SCRIPT_BUILD:-.*}\"|SCRIPT_BUILD=\"$LIB_BUILD\"|" \
   "$INSTALL_HOME/lib/common.sh" || true
-echo "Kopiert: backup.sh, restore.sh, test-restore.sh, lib/, policies.d/, policy.conf -> $INSTALL_HOME (Version ${LIB_VERSION}${LIB_BUILD:+ +#$LIB_BUILD}, installiert $INSTALL_STAMP)"
+echo "Copied: backup.sh, restore.sh, test-restore.sh, lib/, policies.d/, policy.conf -> $INSTALL_HOME (version ${LIB_VERSION}${LIB_BUILD:+ +#$LIB_BUILD}, installed $INSTALL_STAMP)"
 
-# --- Konfiguration schreiben (vorhandene nicht ueberschreiben, nur ergaenzen) ---
+# --- Write config (never overwrite an existing file, only add missing entries) ---
 if [[ -f "$CONF_FILE" ]]; then
-  echo "Hinweis: $CONF_FILE existiert bereits — pruefe Eintraege:"
+  echo "Note: $CONF_FILE already exists — checking entries:"
   missing=()
   grep -q "^STACKS_DIR=" "$CONF_FILE" || missing+=("STACKS_DIR=$STACKS_DIR")
   grep -q "^BACKUP_ROOT=" "$CONF_FILE" || missing+=("BACKUP_ROOT=$BACKUP_ROOT")
   grep -q "^POLICY_DIR=" "$CONF_FILE" || missing+=("POLICY_DIR=$INSTALL_HOME/policies.d")
-  # Verwaisten POLICY_DIR korrigieren (Pfad existiert nicht mehr, z.B. alte Installation)
+  # Fix an orphaned POLICY_DIR (path no longer exists, e.g. from an old installation)
   old_policy_dir="$(grep -m1 '^POLICY_DIR=' "$CONF_FILE" | cut -d= -f2-)"
   if [[ -n "$old_policy_dir" && ! -d "$old_policy_dir" ]]; then
     sed -i "s|^POLICY_DIR=.*|POLICY_DIR=$INSTALL_HOME/policies.d|" "$CONF_FILE"
-    echo "Korrigiert: POLICY_DIR $old_policy_dir existiert nicht -> $INSTALL_HOME/policies.d"
+    echo "Fixed: POLICY_DIR $old_policy_dir does not exist -> $INSTALL_HOME/policies.d"
   fi
   grep -q "^KEEP_VERSIONS=" "$CONF_FILE" || missing+=("KEEP_VERSIONS=14")
   if [[ ${#missing[@]} -gt 0 ]]; then
     printf '%s\n' "${missing[@]}" >> "$CONF_FILE"
-    echo "Ergaenzt: ${missing[*]}"
+    echo "Added: ${missing[*]}"
   fi
 else
   cat > "$CONF_FILE" <<EOF
-# Backup-Konfiguration (von install.sh erzeugt) — Quelle, Ziel, Heimat der Deklarationen
-# Quelle: Compose-Stacks inkl. deren .env-Dateien (fuer DB-Passwoerter via ENV_FILE)
+# Backup configuration (generated by install.sh) — source, target, policy home
+# Source: compose stacks including their .env files (for DB passwords via ENV_FILE)
 STACKS_DIR=$STACKS_DIR
-# Ziel: NAS-Mount (Dispatcher verweigert Start, wenn kein Mount)
+# Target: NAS mount (the dispatcher refuses to start if not mounted)
 BACKUP_ROOT=$BACKUP_ROOT
-# Heimat der Policy-Overlays (installierte Kopie, unabhaengig vom Repo)
+# Home of the policy overlays (installed copy, independent of the repo)
 POLICY_DIR=$INSTALL_HOME/policies.d
-# Optional: Restic (erst aktivieren, wenn restic installiert + Passwortdatei existiert)
+# Optional: restic (only enable once restic is installed + password file exists)
 USE_RESTIC=false
 # RESTIC_PASSWORD_FILE=/etc/restic-password
-# Anzahl behaltener Versionen (rsnapshot-Rotation v.0..v.KEEP_VERSIONS-1)
+# Number of retained versions (rsnapshot-style rotation v.0..v.KEEP_VERSIONS-1)
 KEEP_VERSIONS=14
 EOF
   chmod 600 "$CONF_FILE"
-  echo "Erzeugt: $CONF_FILE"
+  echo "Created: $CONF_FILE"
 fi
 
-# --- Docs mitgeben (Referenz auf dem Host, gilt fuer alle Tools) ---
+# --- Also install the docs (reference on the host, applies to all tools) ---
 if [[ -d "$SCRIPT_DIR/../docs" ]]; then
   copy_tree "$SCRIPT_DIR/../docs" "$TOOLS_HOME/docs"
-  echo "Kopiert: docs/ -> $TOOLS_HOME/docs/"
+  echo "Copied: docs/ -> $TOOLS_HOME/docs/"
 fi
 
 echo
-echo "== Installation abgeschlossen =="
-echo "Naechste Schritte:"
-echo "  1. Trockenlauf:  sudo $INSTALL_HOME/backup.sh --dry-run"
-echo "  2. Erstlauf:     sudo $INSTALL_HOME/backup.sh --service <container-name>"
-echo "  3. Voller Lauf:  sudo $INSTALL_HOME/backup.sh"
-echo "  Cron-Zeiten:     siehe $TOOLS_HOME/docs/DEPLOYMENT.md"
+echo "== Installation complete =="
+echo "Next steps:"
+echo "  1. Dry run:      sudo $INSTALL_HOME/backup.sh --dry-run"
+echo "  2. First run:    sudo $INSTALL_HOME/backup.sh --service <container-name>"
+echo "  3. Full run:     sudo $INSTALL_HOME/backup.sh"
+echo "  Cron schedule:   see $TOOLS_HOME/docs/DEPLOYMENT.md"
