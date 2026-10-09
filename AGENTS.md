@@ -25,7 +25,8 @@
 ## Git/PR-Workflow (wichtig!)
 
 - **Vor jedem neuen PR**: Prüfen, ob es bereits einen offenen PR gibt, der ergänzt werden kann — bestehenden PR aktualisieren (Branch pushen), statt einen neuen zu öffnen. Branch-Head checken, bei Rewrites `--force-with-lease`.
-- **Niemals annehmen, dass ein Change automatisch in einen offenen PR integriert wird** — Merge-Status und Branch-Divergenz prüfen (passiert schon zweimal: Fixes liefen Gefahr, hinter einem Merge zu verschwinden).
+- **Niemals annehmen, dass ein Change automatisch in einen offenen PR integriert wird** — Merge-Status und Branch-Divergenz prüfen (passiert schon dreimal: Fixes liefen Gefahr, hinter einem Merge zu verschwinden).
+- **Harte Regel — kein Push auf einen Branch, dessen PR bereits gemerged ist.** Vor JEDEM Push: `gh pr list --state all` bzw. PR-Status des Branches prüfen. Ist der PR (auch nur Sekunden zuvor) gemerged, gehört jeder neue Change auf einen **frischen Branch von aktuellem `origin/main`** mit eigenem PR. Ein Push auf einen toten Branch verwirft den Change faktisch — er erreicht main nie von selbst.
 - Branches: `vibe/<slug>-5f329e`, Draft-PR als Standard, kein Push auf `main`.
 - Commits fokussiert und beschreibend; PR-Body mit Summary + Verification.
 
