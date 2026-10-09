@@ -95,11 +95,11 @@ sudo /opt/docker/tools/backup/test-restore.sh            # Restore-Fähigkeit pr
 ### Nächtclicher Cron (auf dem Docker-Host, root-Crontab)
 
 ```cron
-30 2 * * * /usr/bin/flock -n /tmp/backup-dispatcher.lock /opt/docker/tools/backup/backup.sh >> /var/log/backup-dispatcher.log 2>&1
+30 2 * * * /opt/docker/tools/backup/backup.sh >> /var/log/backup-dispatcher.log 2>&1
 ```
 
 - Läuft täglich um 02:30 Uhr
-- `flock -n` verhindert Überlappungen (das Skript selbst lockt zusätzlich — doppelt abgesichert)
+- Das Skript lockt sich selbst (`flock` auf `/tmp/backup-dispatcher.lock`) — parallele Läufe werden abgewiesen; **kein externer `flock`-Wrapper** um den Cron-Aufruf (derselbe Lockfile extern+intern blockiert sich gegenseitig)
 - Log landet in `/var/log/backup-dispatcher.log` (das Skript schreibt zusätzlich strukturiert nach `$BACKUP_ROOT/logs/`)
 
 Einrichten mit `sudo crontab -e` und Zeile einfügen.
