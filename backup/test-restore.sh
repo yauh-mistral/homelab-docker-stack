@@ -93,18 +93,15 @@ for svc in "${TARGETS[@]}"; do
 
   log_info "$svc: spiele Dump $dump in Test-DB ein..."
   # pg_dumpall-Dumps (DB_DUMP_ALL) enthalten \connect-Anweisungen und legen
-  # Tabellen in der Original-DB an — Restore in die Original-DB-Role/Name simulieren.
+  # Tabellen in der Original-DB an — Restore in die Original-DB simulieren.
   # Einfache pg_dump-Dumps landen in der Ziel-DB testdb (kein \connect enthalten).
   restore_db="testdb"
   if grep -aq '^\\connect' <(gunzip -c "$dump" | head -50); then
     restore_db="$DB_NAME"
+    # Original-DB VOR dem Import anlegen — der Dump wechselt per \connect dorthin
+    docker exec "$TEST_PG_NAME" psql -U test -d testdb -c "CREATE DATABASE \"$restore_db\"" >/dev/null 2>&1 || true
   fi
   if gunzip -c "$dump" | docker exec -i "$TEST_PG_NAME" psql -U test -d "$restore_db" --set ON_ERROR_STOP=off >/dev/null 2>&1; then
-    # Bei pg_dumpall wurde per \connect gewechselt; Tabellenzaehlung in der Original-DB.
-    # Originale DB muss im Wegwerf-Postgres existieren — dafuer bei Bedarf anlegen.
-    if [[ "$restore_db" != "testdb" ]] && ! docker exec "$TEST_PG_NAME" psql -U test -d testdb -tAc "SELECT 1 FROM pg_database WHERE datname='$restore_db'" | grep -q 1; then
-      docker exec "$TEST_PG_NAME" psql -U test -d testdb -c "CREATE DATABASE \"$restore_db\"" >/dev/null 2>&1
-    fi
     tables="$(docker exec "$TEST_PG_NAME" psql -U test -d "$restore_db" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'" 2>/dev/null)"
     if [[ "${tables:-0}" -gt 0 ]]; then
       log_ok "$svc: Restore-Test BESTANDEN ($tables Tabellen aus Stand $latest)"
@@ -121,8 +118,6 @@ for svc in "${TARGETS[@]}"; do
   if [[ "$restore_db" != "testdb" ]]; then
     docker exec "$TEST_PG_NAME" psql -U test -d testdb -c "DROP DATABASE IF EXISTS \"$restore_db\" WITH (FORCE)" >/dev/null 2>&1
   fi
-  # Test-DB fuer naechsten Service leeren
-  docker exec "$TEST_PG_NAME" psql -U test -d testdb -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" >/dev/null 2>&1
 done
 
 docker rm -f "$TEST_PG_NAME" >/dev/null 2>&1
