@@ -1,5 +1,20 @@
 # AGENTS.md — Leitlinie für die Zusammenarbeit an arcane-docker-stack
 
+## Repo-Zweck & Doku-Verteilung
+
+- Dieses Repo umfasst die **gesamte Docker-Landschaft des Hosts**: Compose-Stacks (`projects/`), das Backup-System (`backup/`) und die In-depth-Doku (`docs/`). Kernstück ist **Arcane** als Verwaltungsoberfläche, unter der alle Stacks als Projekte laufen.
+- **README.md** = Überblick: Komponenten, Stacks, Zusammenhänge (inkl. Mermaid-Diagramm), Kurzfassungen mit Link auf docs/. **Keine Schritt-für-Schritt-Anleitungen im README.**
+- **docs/** = In-depth: DEPLOYMENT.md (Installation/Inbetriebnahme/Cron), BACKUP-STRATEGIE.md (Strategie/Policy-Referenz), RESTORE.md (Restore), INVENTAR.md (Service-Inventar), QUESTIONS.md (Annahmen/offene Punkte).
+- **Redundanz-Regel**: Jedes Thema hat genau eine ausführliche Heimat; das andere verlinkt mit Kurzfassung. Nie Inhalte doppelt pflegen — bei Änderungen beide Stellen prüfen oder die Kurzfassung bewusst generisch halten.
+
+## Docker-Projects-Thematik (projects/)
+
+- **Stack-Anlage**: Jeder Stack liegt in `projects/<stack>/` mit `compose.yaml` (+ optionalem `.env.example`). Keine `.env` im Repo (siehe .env-Konventionen unten).
+- **Arcane als Verwaltung**: Stacks werden als Projekte in Arcane verwaltet. Das Repo ist die Deklarationsquelle; der Deploy-Status entscheidet sich zur Laufzeit (Discovery nutzt `docker ps`, nicht das Repo).
+- **Service hinzufügen/entfernen**: compose.yaml im Stack anpassen (oder neuen Stack anlegen), `.env.example` mit `make-env-examples.sh` pflegen, auf dem Host die echte `.env` befüllen, dann `docker compose up -d`. Entfernte Services muss der Backup-Dispatcher unbeeindruckt verkraften (SKIP).
+- **Bind-Mount-Konvention**: Nutzdaten unter `/opt/docker/<service>/`. Docker Volumes nie für zu sichernde Daten. NAS-Mounts (`/mnt/...`) nie als Backup-Quelle.
+- **Backup-Anbindung**: Neue Services mit laufender DB oder Mounts werden vom Auto-Discovery automatisch erkannt und gesichert. Nur bei Besonderheiten (rebuildbare Daten, Caches, DB-Tool-Anpassungen) eine Policy in `backup/policies.d/` anlegen — mit Begründungskommentar, damit die Ausnahme später nachvollziehbar bleibt.
+
 ## Ziel & Umgebung
 
 - **Zielsystem**: Ubuntu 26.04 mit Docker (Host `ovi`). Services können jederzeit deployed, gestartet, gestoppt oder entfernt sein — der Backup-Dispatcher muss damit umgehen (SKIP bei nicht deploytem Service, Teil-Backup bei halb fehlender Quelle, nie stiller Scheinerfolg).
