@@ -19,7 +19,7 @@ Kernstück ist **Arcane** — die Verwaltungsoberfläche, unter der alle Stacks 
 
 | Stack | Services (Auswahl) | Zweck |
 |---|---|---|
-| `arcane` | arcane | Verwaltung aller Projekte (Kernstück). **Hinweis:** Arcane selbst läuft nicht aus `projects/arcane`, sondern aus dem host-seitigen Compose-File `tools/arcane/compose.yml` (Host: `/opt/docker/tools/arcane/compose.yml`, Projekt `base`) — es kann sich nicht selbst hosten („Bootstrap-Problem"). Der Container ist identisch: `ghcr.io/getarcaneapp/arcane:latest`, Mounts auf `/opt/docker/arcane/data` und `/opt/docker/arcane/projects` |
+| — | arcane | Verwaltung aller Projekte (Kernstück). **Hinweis:** Arcane läuft **nicht** aus `projects/` (kein `projects/arcane`-Verzeichnis), sondern aus dem host-seitigen Compose-File `tools/arcane/compose.yml` (Host: `/opt/docker/tools/arcane/compose.yml`, Projekt `base`) — es kann sich nicht selbst hosten („Bootstrap-Problem"). Der Container: `ghcr.io/getarcaneapp/arcane:latest`, Mounts auf `/opt/docker/arcane/data` und `/opt/docker/arcane/projects` |
 | `arr-stack` | sonarr, radarr, lidarr, bazarr, prowlarr, sabnzbd, overseerr | PVR/Media-Automation |
 | `media` | plex, tautulli, audiobookshelf, metube, calibre-web, codex, tdarr | Medienserver & -verarbeitung |
 | `smarthome` | homeassistant, music-assistant, mosquitto, matter-server | Hausautomatisierung |
