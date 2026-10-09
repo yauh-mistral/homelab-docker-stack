@@ -1,7 +1,7 @@
 # Restore-Anleitung pro Backup-Kategorie
 
 Allgemein: `backup/restore.sh <service> [--date YYYY-MM-DD_HHMM] [--dry-run]`
-Liste der Services: `backup/backup.sh --list`. Backup-Stände: `/mnt/systems/backups/ovi/<service>/db|files/<zeitstempel>`.
+Liste der Services: `backup/backup.sh --list`. Backup-Stände: `/mnt/systems/backups/&lt;host&gt;/&lt;service&gt;/db|files/&lt;zeitstempel&gt;`.
 
 **Vor jedem Restore**: `backup/backup.sh --service <name>` laufen lassen (frischer Stand) oder bewusst den letzten Stand verwenden. `--dry-run` zuerst zeigen lassen, was passieren würde.
 

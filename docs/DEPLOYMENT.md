@@ -1,6 +1,6 @@
-# Deployment auf Host `ovi`
+# Deployment auf dem Docker-Host
 
-Anleitung, um das Backup-System auf dem Ubuntu-Host `ovi` in Betrieb zu nehmen und einen Testrun zu starten.
+Anleitung, um das Backup-System auf dem Ubuntu-Docker-Host in Betrieb zu nehmen und einen Testrun zu starten.
 
 ## Architektur: Wer lebt wo?
 
@@ -21,19 +21,19 @@ Anleitung, um das Backup-System auf dem Ubuntu-Host `ovi` in Betrieb zu nehmen u
 └── maintenance/               docker-maintenance.sh (prune, inkl. Volumes)
 
 /etc/backup.conf               Konfiguration: Quelle, Ziel, Restic (chmod 600)
-/mnt/systems/backups/ovi/      ZIEL auf dem NAS (db/ + files/ + logs/)
+/mnt/systems/backups/&lt;host&gt;/      ZIEL auf dem NAS (db/ + files/ + logs/)
 ```
 
 Das Backup-System liegt **bewusst nicht im Repo-Checkout** (`/opt/docker/arcane`): Der Installer kopiert es nach `/opt/docker/tools/backup` (konfigurierbar via `--home`). Repo-Updates überschreiben die Installation nicht; ein Re-Run von `install.sh` aktualisiert sie (Policies in `policies.d/`/`policy.conf` können individuell angepasst bleiben, `rsync` ohne `--delete`).
 
 **Woher kommen Quelle und Ziel?** Ausdrücklich aus `/etc/backup.conf`:
 - `STACKS_DIR` — wo Compose-Stacks und deren `.env` leben (z.B. `/opt/docker/arcane/projects`). Deklarationen nutzen den Platzhalter `%STACKS_DIR%` (z.B. `ENV_FILE=%STACKS_DIR%/ghost/.env`), der Dispatcher löst ihn auf. So bleibt die Deklaration host-agnostisch.
-- `BACKUP_ROOT` — Ziel auf dem NAS (`/mnt/systems/backups/ovi`).
+- `BACKUP_ROOT` — Ziel auf dem NAS (`/mnt/systems/backups/<host>`).
 - `POLICY_DIR` — Policy-Heimat (bei Installation `/opt/docker/tools/backup/policies.d`).
 
 ## Schritt 0: Voraussetzungen
 
-- Ubuntu-Host `ovi` mit root-Zugriff, Docker läuft
+- Ubuntu-Host mit root-Zugriff, Docker läuft
 - Repo-Checkout unter `/opt/docker/arcane` (aktuell: `sudo git pull`)
 - NAS-Mount `/mnt/systems` eingebunden: `findmnt /mnt/systems`
 
@@ -54,7 +54,7 @@ sudo git pull
 sudo tools/backup/install.sh \
   --home /opt/docker/tools/backup \
   --stacks-dir /opt/docker/arcane/projects \
-  --backup-root /mnt/systems/backups/ovi
+  --backup-root /mnt/systems/backups/&lt;host&gt;
 ```
 
 Der Installer:
@@ -71,7 +71,7 @@ sudo cat /etc/backup.conf
 Minimalinhalt:
 ```bash
 STACKS_DIR=/opt/docker/arcane/projects      # Quelle: Compose + .env
-BACKUP_ROOT=/mnt/systems/backups/ovi        # Ziel: NAS
+BACKUP_ROOT=/mnt/systems/backups/&lt;host&gt;    # Ziel: NAS (pro Host ein Unterverzeichnis)
 POLICY_DIR=/opt/docker/tools/backup/policies.d  # Heimat der Policy-Overlays
 USE_RESTIC=false
 ```
@@ -87,14 +87,14 @@ Erwartung: pro Service `[DRY]`-Zeilen mit exakten `docker exec`/rsync-Befehlen, 
 
 ```bash
 sudo /opt/docker/tools/backup/backup.sh --service litellm
-sudo ls -la /mnt/systems/backups/ovi/litellm/db/*/
+sudo ls -la /mnt/systems/backups/&lt;host&gt;/litellm/db/*/
 ```
 
 ## Schritt 6: Voller Testrun
 
 ```bash
 sudo /opt/docker/tools/backup/backup.sh
-sudo grep FAIL /mnt/systems/backups/ovi/logs/<neuester-stamp>.log
+sudo grep FAIL /mnt/systems/backups/&lt;host&gt;/logs/<neuester-stamp>.log
 ```
 Einzelfehler isolieren andere Services nicht (Fehler-Isolation pro Deklaration). Stop-Fenster-Services (arr-Stack, Home Assistant, Mealie, Kuma …) sind kurz down — nachts cron-fähig.
 
@@ -106,7 +106,7 @@ Einzelfehler isolieren andere Services nicht (Fehler-Isolation pro Deklaration).
 - Falsch deklarierte Services (DB-Kategorie ohne `DB_TYPE`, leere `FILE_PATHS`) bleiben FAIL — das ist ein Deklarationsfehler, kein Host-Zustand.
 - Docker-Daemon nicht erreichbar (echter Lauf) → harter Abbruch statt 43 SKIPs.
 
-`SKIP` bedeutet damit zweierlei: per Deklaration `ignore` ODER „Quelle auf diesem Host nicht vorhanden“. Die Lücken-Liste am Ende des Laufs (`WARN - DB-Container fehlt: …`) zeigt genau, welche Services nicht deployt sind — Auslieferung auf ovi ohne FAIL-Alarm möglich.
+`SKIP` bedeutet damit zweierlei: per Deklaration `ignore` ODER „Quelle auf diesem Host nicht vorhanden“. Die Lücken-Liste am Ende des Laufs (`WARN - DB-Container fehlt: …`) zeigt genau, welche Services nicht deployt sind — Auslieferung ohne FAIL-Alarm möglich.
 
 ## Schritt 7: Restore-Test
 
@@ -133,7 +133,7 @@ Die Maintenance-Zeile (sonntags 04:30) prunt bewusst auch Volumes (`--volumes`-V
 Ziel-Pfade enthalten **keine Timestamps** mehr. Jeder Service hat rotierende Versionen:
 
 ```text
-/mnt/systems/ovi/backups/<service>/db/v.0     <- aktuellster Stand
+/mnt/systems/&lt;host&gt;/backups/&lt;service&gt;/db/v.0     <- aktuellster Stand
                                                   v.1 ... v.KEEP_VERSIONS-1
 ```
 
@@ -155,8 +155,8 @@ sudo sh -c 'openssl rand -base64 32 > /etc/restic-password && chmod 600 /etc/res
 
 ## Monitoring & Betrieb
 
-- Letzter Lauf: `cat /mnt/systems/backups/ovi/logs/last-run-summary.txt`
-- Logs: `ls -t /mnt/systems/backups/ovi/logs/ | head -1`
+- Letzter Lauf: `cat /mnt/systems/backups/&lt;host&gt;/logs/last-run-summary.txt`
+- Logs: `ls -t /mnt/systems/backups/&lt;host&gt;/logs/ | head -1`
 - Service nachziehen: `sudo /opt/docker/tools/backup/backup.sh --service <name>`
 - Restore: `docs/RESTORE.md`, zuerst `--dry-run`
 
@@ -165,7 +165,7 @@ sudo sh -c 'openssl rand -base64 32 > /etc/restic-password && chmod 600 /etc/res
 Repo-Änderungen (neue Deklarationen, Fixes) einspielen:
 ```bash
 cd /opt/docker/arcane && sudo git pull
-sudo tools/backup/install.sh --stacks-dir /opt/docker/arcane/projects --backup-root /mnt/systems/backups/ovi
+sudo tools/backup/install.sh --stacks-dir /opt/docker/arcane/projects --backup-root /mnt/systems/backups/&lt;host&gt;
 ```
 `install.sh` aktualisiert die Installation (rsync ohne `--delete`: lokal angepasste Deklarationen bleiben erhalten).
 

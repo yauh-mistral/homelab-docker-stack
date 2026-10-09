@@ -17,7 +17,7 @@
 
 ## Ziel & Umgebung
 
-- **Zielsystem**: Ubuntu 26.04 mit Docker (Host `ovi`). Services können jederzeit deployed, gestartet, gestoppt oder entfernt sein — der Backup-Dispatcher muss damit umgehen (SKIP bei nicht deploytem Service, Teil-Backup bei halb fehlender Quelle, nie stiller Scheinerfolg).
+- **Zielsystem**: Ubuntu 26.04 mit Docker (Docker-Host). Services können jederzeit deployed, gestartet, gestoppt oder entfernt sein — der Backup-Dispatcher muss damit umgehen (SKIP bei nicht deploytem Service, Teil-Backup bei halb fehlender Quelle, nie stiller Scheinerfolg).
 - **Datenhaltung**: Nutzdaten liegen als Bind-Mounts im Host-Dateisystem (`/opt/docker/...`), auch Datenbanken. **Docker Volumes werden nie für zu sichernde Daten genutzt.** NAS-Mounts (`/mnt/...`) sind nie Backup-Quelle — das NAS hat sein eigenes Backup.
 - **Restore-Philosophie**: Restore muss mit minimalen Daten funktionieren. Vollständig gesichert werden: Nutzdaten (Medien etc.), Konfiguration, Metadaten, Permissions. **Nicht gesichert**: Thumbnails, Logs, temporäre Dateien — alles, was der Container beim Start selbst regeneriert. **Compute/Zeit beim Restore ist akzeptabel, wenn dadurch das Backup kürzer und kleiner wird.**
 - **Keine doppelten Backups**: Wenn Daten sowohl auf Platte als auch in einer DB liegen und aus einem von beiden rekonstruierbar sind, nur eines sichern (Beispiel: Forgejo-Repos vs. `forgejo dump --skip-repository`).
