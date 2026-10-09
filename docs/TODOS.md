@@ -1,8 +1,7 @@
 # Todos
 
-Ausschließlich offene Aufgaben — erledigte Punkte und getroffene Entscheidungen werden hier nicht archiviert (bei Bedarf in der PR-Historie nachlesbar).
+Only open tasks — completed items and decisions made are not archived here (consult the PR history if needed).
 
-
-- [ ] **restore.sh testen & verifizieren** — der Restore-Test der DB-Dumps ist vollständig (alle 5 DB-Services, Postgres + MariaDB, in Wegwerf-Containern). Unverifiziert bleibt der echte Restore über `restore.sh`: Dateien zurück in Produktiv-Pfade + Dump einspielen gegen die Produktiv-DB. Ein vollautomatisierter Test ist schwer ohne das Live-System zu gefährden — Optionen:
-  - **Manueller Probe-Restore** (empfohlen): einzelne Dateien und DB-Dumps per Hand in eine isolierte Sandbox bzw. auf ein Wegwerf-Zielverzeichnis zurückspielen und verifizieren (Entpacken der `*.sql.gz`, Struktur-Check der Files-Stände), ohne `docker compose` des Live-Systems anzufassen.
-  - Alternativ bleibt dieses Todo bestehen, bis ein isolierter Testaufbau (zweiter Host / Wegwerf-VM) verfügbar ist.
+- [ ] **Test & verify restore.sh** — the restore test of the DB dumps is complete (all 5 DB services, Postgres + MariaDB, in throwaway containers). What remains unverified is the real restore via `restore.sh`: files back to production paths + replaying a dump against the production DB. A fully automated test is hard to do without endangering the live system — options:
+  - **Manual probe restore** (recommended): replay individual files and DB dumps by hand into an isolated sandbox or a throwaway target directory and verify (unpacking the `*.sql.gz`, structure check of the file states), without touching the live system's `docker compose`.
+  - Alternatively this todo remains until an isolated test setup (second host / throwaway VM) is available.
