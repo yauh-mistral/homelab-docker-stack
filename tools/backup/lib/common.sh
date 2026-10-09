@@ -53,7 +53,7 @@ _TIMESTAMP="$(date +%Y-%m-%d_%H%M)"
 
 # --- Logging ---
 log_init() {
-  local dir="$BACKUP_ROOT/_meta/runs"
+  local dir="$BACKUP_ROOT/logs"
   if [[ "$DRY_RUN" == "true" ]]; then
     LOG_FILE=""
     return 0

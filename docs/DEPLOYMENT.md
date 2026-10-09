@@ -21,7 +21,7 @@ Anleitung, um das Backup-System auf dem Ubuntu-Host `ovi` in Betrieb zu nehmen u
 └── maintenance/               docker-maintenance.sh (prune, inkl. Volumes)
 
 /etc/backup.conf               Konfiguration: Quelle, Ziel, Restic (chmod 600)
-/mnt/systems/backups/ovi/      ZIEL auf dem NAS (db/ + files/ + _meta/)
+/mnt/systems/backups/ovi/      ZIEL auf dem NAS (db/ + files/ + logs/)
 ```
 
 Das Backup-System liegt **bewusst nicht im Repo-Checkout** (`/opt/docker/arcane`): Der Installer kopiert es nach `/opt/docker/tools/backup` (konfigurierbar via `--home`). Repo-Updates überschreiben die Installation nicht; ein Re-Run von `install.sh` aktualisiert sie (Policies in `policies.d/`/`policy.conf` können individuell angepasst bleiben, `rsync` ohne `--delete`).
@@ -94,7 +94,7 @@ sudo ls -la /mnt/systems/backups/ovi/litellm/db/*/
 
 ```bash
 sudo /opt/docker/tools/backup/backup.sh
-sudo grep FAIL /mnt/systems/backups/ovi/_meta/runs/<neuester-stamp>.log
+sudo grep FAIL /mnt/systems/backups/ovi/logs/<neuester-stamp>.log
 ```
 Einzelfehler isolieren andere Services nicht (Fehler-Isolation pro Deklaration). Stop-Fenster-Services (arr-Stack, Home Assistant, Mealie, Kuma …) sind kurz down — nachts cron-fähig.
 
@@ -155,8 +155,8 @@ sudo sh -c 'openssl rand -base64 32 > /etc/restic-password && chmod 600 /etc/res
 
 ## Monitoring & Betrieb
 
-- Letzter Lauf: `cat /mnt/systems/backups/ovi/_meta/last-run-summary.txt`
-- Logs: `ls -t /mnt/systems/backups/ovi/_meta/runs/ | head -1`
+- Letzter Lauf: `cat /mnt/systems/backups/ovi/logs/last-run-summary.txt`
+- Logs: `ls -t /mnt/systems/backups/ovi/logs/ | head -1`
 - Service nachziehen: `sudo /opt/docker/tools/backup/backup.sh --service <name>`
 - Restore: `docs/RESTORE.md`, zuerst `--dry-run`
 
