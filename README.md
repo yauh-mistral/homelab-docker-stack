@@ -129,7 +129,7 @@ arcane-docker-stack/
 
 ## Doku-Verteilung (weniger Redundanz)
 
-In-depth-Doku in `docs/`: [`DEPLOYMENT.md`](docs/DEPLOYMENT.md) (Installation, Cron) · [`BACKUP-STRATEGIE.md`](docs/BACKUP-STRATEGIE.md) (Strategie, Policies) · [`RESTORE.md`](docs/RESTORE.md) (Restore) · [`INVENTAR.md`](docs/INVENTAR.md) (Service-Inventar) · [`TODOS.md`](docs/TODOS.md) (offene Todos)
+In-depth-Doku in `docs/`: [`DEPLOYMENT.md`](docs/DEPLOYMENT.md) (Installation, Cron) · [`BACKUP-STRATEGIE.md`](docs/BACKUP-STRATEGIE.md) (Strategie, Policies) · [`RESTORE.md`](docs/RESTORE.md) (Restore) · [`TODOS.md`](docs/TODOS.md) (offene Todos). Das reale Service-Inventar liefert die Auto-Discovery: `backup.sh --discover`.
 
 Regel: **README = Überblick, docs/ = Schritt für Schritt.**
 

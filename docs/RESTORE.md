@@ -1,20 +1,22 @@
 # Restore-Anleitung pro Backup-Kategorie
 
-Allgemein: `backup/restore.sh <service> [--date YYYY-MM-DD_HHMM] [--dry-run]`
-Liste der Services: `backup/backup.sh --list`. Backup-Stände: `/mnt/systems/backups/<host>/<service>/db|files/<zeitstempel>`.
+> ⚠️ **UNGETESTET — WORK IN PROGRESS.** `restore.sh` wurde noch nie gegen ein echtes Zielsystem ausgeführt. Die hier beschriebenen Abläufe sind plausibel, aber unverifiziert. Vor jedem produktiven Restore: Anweisung Schritt für Schritt gegen den aktuellen Code prüfen, zuerst `--dry-run`, und nach Möglichkeit an einem Wegwerf-Ziel testen. Bis zur Verifikation gilt: Restore-Anleitung `docs/RESTORE.md` = Referenz, `restore.sh` = experimentell.
+
+Allgemein: `backup/restore.sh <service> [--version v.N] [--dry-run] [--db-only] [--files-only]`
+Liste der Services: `backup/backup.sh --discover`. Backup-Stände: `/mnt/systems/backups/<host>/<service>/db|files/v.N` (`v.0` = aktuellster Stand).
 
 **Vor jedem Restore**: `backup/backup.sh --service <name>` laufen lassen (frischer Stand) oder bewusst den letzten Stand verwenden. `--dry-run` zuerst zeigen lassen, was passieren würde.
 
 ## Kategorie: DB-Dump (postgres / mysql / mariadb)
 
-Services: analytics, castopod, ghost, immich, litellm, n8n, paperless
+Services (aktuell): analytics-db, castopod_mariadb, ghost-mysql, immich_postgres, litellm_db
 
 1. Service-Stack ggf. stoppen (App-Container, NICHT die DB): `docker stop <app-container>` — sonst schreiben Apps während des Restores.
 2. `backup/restore.sh <service> --db-only`
    - Postgres: `gunzip -c dump.sql.gz | docker exec -i <db> psql -U <user> -d <db> --single-transaction --set ON_ERROR_STOP=on`
    - MySQL/MariaDB: analog mit `mysql -u<user> <db>` (Passwort via Env).
 3. App-Container wieder starten.
-4. **Verifizieren**: Login testen, Objektzahl plausibilisieren (z.B. Immich: Fotos zählen; n8n: Workflows auflisten).
+4. **Verifizieren**: Login testen, Objektzahl plausibilisieren (z.B. Immich: Fotos zählen).
 
 Spezialfälle:
 - **Immich**: Restore in eine *leere* DB (Doku: frische Installation, `docker compose create`, nur DB-Container starten, Dump einspielen, dann Rest starten). Der Dump enthält `--clean --if-exists` bzw. pg_dumpall-Form und kann über bestehende Strukturen gespielt werden.
@@ -36,18 +38,16 @@ Hersteller-Prozedur (Vaultwarden-Wiki):
 
 ## Kategorie: Datei-Rsync-Restic (und config_only mit Stop-Fenster)
 
-Services: immich (files), castopod (media), opencloud, paperless (files), n8n (.n8n), vaultwarden (attachments/sends), wanderer, forgejo (repos), ghost (content) sowie alle config_only-Services.
+Services (aktuell): immich (files), castopod (media), vaultwarden, wanderer, forgejo (repos), ghost (content) sowie alle Config-only-Services.
 
 1. `backup/restore.sh <service> --files-only [--date ...]`
    - Das Skript öffnet automatisch das Stop-Fenster (deklarierte `STOP_CONTAINERS`), rsynct die Dateien zurück und startet die Container wieder.
 2. **Verifizieren** je Service:
    - Immich: Fotos sichtbar, Thumbs bauen sich nach.
-   - Paperless: Dokumente durchsuchbar (ggf. `document_importer` bei Export-Backups).
-   - OpenCloud: Login + Dateiliste; Hersteller: Restore im gestoppten Zustand; danach Start und Funktionstest (Datei hochladen/runterladen).
-   - arr-Services (sonarr etc.): UI öffnen, Serien/Filme vorhanden, keine DB-Fehler im Log.
+      - arr-Services (sonarr etc.): UI öffnen, Serien/Filme vorhanden, keine DB-Fehler im Log.
 3. **Achtung Restore-Richtung**: `restore_files` überschreibt den aktuellen Zustand des Zielpfads mit dem Backup-Stand (`rsync -a` ohne `--delete` — Dateien, die im Backup nicht sind, bleiben liegen; für exakte Spiegelung `rsync -a --delete` manuell nachziehen).
 
-## Kategorie: config_only ohne Stop-Fenster (node-red, homepage, searxng, web-proxy, mosquitto, codex, dnd)
+## Kategorie: config_only ohne Stop-Fenster (homepage, searxng, web-proxy, mosquitto, codex)
 
 1. `backup/restore.sh <service> --files-only`
 2. Container i.d.R. neu starten (`docker restart <c>`), damit Config neu eingelesen wird.
@@ -55,7 +55,7 @@ Services: immich (files), castopod (media), opencloud, paperless (files), n8n (.
 
 ## Kategorie: ignorieren
 
-Für als `ignore` deklarierte Services (crawl4ai, firecrawl, metube, Media-Libraries) gibt es keinen Restore — sie sind aus dem Compose-Stack neu aufsetzbar bzw. die Daten liegen in den Media-Backups anderer Systeme.
+Für als `ignore` deklarierte Services (crawl4ai, firecrawl, metube, Media-Libraries — siehe `policies.d/`) gibt es keinen Restore — sie sind aus dem Compose-Stack neu aufsetzbar bzw. die Daten liegen in den Media-Backups anderer Systeme.
 
 ## Restore-Test (halbautomatisch)
 
