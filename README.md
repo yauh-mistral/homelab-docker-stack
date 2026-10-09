@@ -12,7 +12,7 @@ Kernstück ist **Arcane** — die Verwaltungsoberfläche, unter der alle Stacks 
 | **Arcane** (Verwaltung) | `/opt/docker/compose/compose.yml` (Host) | Docker-Verwaltungsoberfläche; verwaltet alle Compose-Stacks als Projekte. **Selbst-Bootstrap**: Arcane kann sich nicht selbst verwalten — es läuft aus einem host-seitigen Compose-File außerhalb des Repos (`/opt/docker/compose/compose.yml`, Projektname `base`). Daten als Bind-Mount unter `/opt/docker/arcane/` |
 | **Compose-Stacks** | `projects/<stack>/` | Deklaration aller Services: `compose.yaml` + `.env.example`. Die echten `.env`-Dateien leben **nur auf dem Host** (`/opt/docker/arcane/projects/<stack>/.env`) — nie im Repo |
 | **Backup-System** | `backup/` | Auto-Discovery-Backup: sichert alle laufenden Container (Dateien + DB-Dumps) auf das NAS. Installiert nach `/opt/docker/backup` via `install.sh` |
-| **Dokumentation** | `docs/` | In-depth-Referenz: Deployment, Backup-Strategie, Restore, Inventar, offene Fragen |
+| **Dokumentation** | `docs/` | In-depth-Referenz: Deployment, Backup-Strategie, Restore, Inventar, Todos & Entscheidungen |
 
 ## Die Stacks (projects/)
 
@@ -106,8 +106,8 @@ Einrichten mit `sudo crontab -e` und Zeile einfügen.
 ```
 arcane-docker-stack/
 ├── AGENTS.md              # Leitlinie für die Zusammenarbeit (KI + Mensch)
-├── projects/              # Compose-Stacks (compose.yaml + .env.example je Stack)
-│   └── env-audit.md       # Secret-Audit + env-Konventionen
+├── projects/              # Compose-Stacks: <stack>/compose.yaml (+ .env.example je Stack)
+│                          #   + env-details.md (Secret-/Format-Konventionen)
 ├── backup/                # Backup-System (Dispatcher, libs, policies)
 │   ├── backup.sh          # Dispatcher mit Auto-Discovery
 │   ├── restore.sh         # Restore pro Service
@@ -121,8 +121,7 @@ arcane-docker-stack/
 │   ├── BACKUP-STRATEGIE.md# Strategie & Policy-Referenz
 │   ├── RESTORE.md         # Restore-Anleitung
 │   ├── INVENTAR.md        # Service-Inventar (Backup-Kategorien)
-│   └── QUESTIONS.md       # Offene Punkte & Annahmen
-└── make-env-examples.sh   # Hilfsskript: .env.example aus .env erzeugen
+│   └── TODOS.md           # Offene Todos & dokumentierte Entscheidungen
 ```
 
 ## Doku-Verteilung (weniger Redundanz)
@@ -130,11 +129,12 @@ arcane-docker-stack/
 | Thema | Hier (README) | In `docs/` |
 |---|---|---|
 | Komponenten, Stacks, Zusammenhänge | Überblick + Diagramm | — |
-| Deployment (Installation, erste Schritte) | Schnellstart-Block | `DEPLOYMENT.md` (vollständig) |
-| Backup (Strategie, Policies, Rotation) | Kurzfassung | `BACKUP-STRATEGIE.md` (Referenz) |
-| Restore | Kurzfassung | `RESTORE.md` (vollständig) |
-| Service-Inventar | Stack-Tabelle (Namen) | `INVENTAR.md` (Kategorien, Größen, Pfade) |
-| Cron-Einrichtung | Beispiel-Zeile | `DEPLOYMENT.md` |
+| Deployment (Installation, erste Schritte) | Schnellstart-Block | [`DEPLOYMENT.md`](docs/DEPLOYMENT.md) (vollständig) |
+| Backup (Strategie, Policies, Rotation) | Kurzfassung | [`BACKUP-STRATEGIE.md`](docs/BACKUP-STRATEGIE.md) (Referenz) |
+| Restore | Kurzfassung | [`RESTORE.md`](docs/RESTORE.md) (vollständig) |
+| Service-Inventar | Stack-Tabelle (Namen) | [`INVENTAR.md`](docs/INVENTAR.md) (Kategorien, Größen, Pfade) |
+| Todos & Entscheidungen | — | [`TODOS.md`](docs/TODOS.md) (offene Punkte, compact) |
+| Cron-Einrichtung | Beispiel-Zeile | [`DEPLOYMENT.md`](docs/DEPLOYMENT.md) |
 
 Regel: **README = was gibt es und wie hängt es zusammen; docs/ = wie mache ich es Schritt für Schritt.** Überschneidungen bewusst als Kurzfassung mit Link, nie als Kopie.
 
