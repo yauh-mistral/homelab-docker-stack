@@ -44,8 +44,8 @@ flowchart LR
     subgraph host["Host ovi (/opt/docker)"]
         B["/opt/docker/compose/compose.yml<br/>(Projekt 'base', Host-Compose)"] -->|"startet (Bootstrap — Arcane<br/>kann sich nicht selbst hosten)"| A
         A["Arcane<br/>(Verwaltung)"] -->|"verwaltet als Projekte"| S["Compose-Stacks<br/>(projects/*)"]
-        S --- B[("/opt/docker/&lt;service&gt;/<br/>Bind-Mount-Daten")]
-        S -.->|".env (nur Host)| E["/opt/docker/arcane/projects/&lt;stack&gt;/.env"]
+        S --- BD[("/opt/docker - Bind-Mount-Daten")]
+        S -.->|".env (nur Host)"| E["stack-.env auf dem Host"]
     end
 
     subgraph backupsys["Backup-System (backup/)"]
@@ -130,11 +130,11 @@ arcane-docker-stack/
 | Thema | Hier (README) | In `docs/` |
 |---|---|---|
 | Komponenten, Stacks, Zusammenhänge | Überblick + Diagramm | — |
-| Deployment (Installation, erste Schritte) | Schnellstart-Block | `DEPLOYMENT.md` (vollständig) |
-| Backup (Strategie, Policies, Rotation) | Kurzfassung | `BACKUP-STRATEGIE.md` (Referenz) |
-| Restore | Kurzfassung | `RESTORE.md` (vollständig) |
-| Service-Inventar | Stack-Tabelle (Namen) | `INVENTAR.md` (Kategorien, Größen, Pfade) |
-| Cron-Einrichtung | Beispiel-Zeile | `DEPLOYMENT.md` |
+| Deployment (Installation, erste Schritte) | Schnellstart-Block | [`DEPLOYMENT.md`](docs/DEPLOYMENT.md) (vollständig) |
+| Backup (Strategie, Policies, Rotation) | Kurzfassung | [`BACKUP-STRATEGIE.md`](docs/BACKUP-STRATEGIE.md) (Referenz) |
+| Restore | Kurzfassung | [`RESTORE.md`](docs/RESTORE.md) (vollständig) |
+| Service-Inventar | Stack-Tabelle (Namen) | [`INVENTAR.md`](docs/INVENTAR.md) (Kategorien, Größen, Pfade) |
+| Cron-Einrichtung | Beispiel-Zeile | [`DEPLOYMENT.md`](docs/DEPLOYMENT.md) |
 
 Regel: **README = was gibt es und wie hängt es zusammen; docs/ = wie mache ich es Schritt für Schritt.** Überschneidungen bewusst als Kurzfassung mit Link, nie als Kopie.
 
