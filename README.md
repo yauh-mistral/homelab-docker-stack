@@ -42,28 +42,34 @@ Kernstück ist **Arcane** — die Verwaltungsoberfläche, unter der alle Stacks 
 
 ```mermaid
 flowchart LR
-    subgraph host["Host ovi (/opt/docker)"]
-        B["tools/arcane/compose.yml (Host)<br/>(Projekt 'base', Host-Compose)"] -->|"startet (Bootstrap — Arcane<br/>kann sich nicht selbst hosten)"| A
-        A["Arcane<br/>(Verwaltung)"] -->|"verwaltet als Projekte"| S["Compose-Stacks<br/>(projects/*)"]
-        S --- BD[("/opt/docker - Bind-Mount-Daten")]
+    subgraph ovi["Docker-Host ovi"]
+        B["tools/arcane/compose.yml<br/>(Projekt 'base')"] -->|"startet (Bootstrap)"| A
+        A["Arcane (Verwaltung)"] -->|"verwaltet als Projekte"| S["Compose-Stacks<br/>(projects/*)"]
+        S --- CFG[("Config-Daten (Host)<br/>/opt/docker/&lt;service&gt;/<br/>Bind-Mounts — gesichert")]
         S -.->|".env (nur Host)"| E["stack-.env auf dem Host"]
     end
 
-    subgraph backupsys["Backup-System (backup/)"]
+    subgraph nas["NAS-Host (NFS)"]
+        MEDIA[("Medien-Daten (NFS)<br/>/mnt/immich, /mnt/media, ...<br/>NAS-eigenes Backup — nicht gesichert")]
+        BKPTGT[("Backup-Ziel<br/>/mnt/systems/ovi/backups")]
+    end
+
+    subgraph backupsys["Backup-System (tools/backup/)"]
         D["backup.sh Dispatcher<br/>(Auto-Discovery)"]
         P["policies.d/*.env<br/>(Ausnahmen)"]
         T["test-restore.sh"]
     end
 
-    D -->|"liest Container, Mounts,<br/>ENV-Credentials"| host
+    S ---|"NFS-Mounts (Medien)"| MEDIA
+    D -->|"liest Container, Mounts,<br/>ENV-Credentials"| ovi
     P --> D
-    D -->|"rsync + DB-Dumps<br/>Rotation v.0..v.13"| NAS[("NAS<br/>/mnt/systems/ovi/backups")]
-    D -->|"Dump-Qualitätstest<br/>(Wegwerf-Postgres)"| T
-
-    C["Cron (nächtlich)"] -->|"flock-gesichert"| D
+    D -->|"rsync + DB-Dumps<br/>Rotation v.0..v.13"| BKPTGT
+    D -->|"Dump-Test"| T
+    C["Cron (nächtlich 02:30)"] -->|"flock-gesichert"| D
+    M["Cron (So 04:30)"] -.->|"Maintenance: prune (inkl. Volumes)"| ovi
 ```
 
-Das Diagramm zeigt das Kernprinzip: **Die Wahrheit der Services lebt in Docker** (Container, Mounts, ENV) — nicht im Repo. Der Backup-Dispatcher entdeckt alles laufende selbst; das Repo liefert nur Struktur, Compose-Deklarationen und Ausnahme-Policies.
+Das Diagramm zeigt die Daten-Trennung: **Config-Daten** leben als Bind-Mounts auf dem Docker-Host (`/opt/docker/...` — vom Backup-System gesichert), **Medien-Daten** auf dem NAS (NFS-Mounts — vom NAS-eigenen Backup abgedeckt), und das **Backup-Ziel** ist ein eigener NAS-Bereich. Kernprinzip: **Die Wahrheit der Services lebt in Docker** (Container, Mounts, ENV) — nicht im Repo. Der Backup-Dispatcher entdeckt alles laufende selbst; das Repo liefert nur Struktur, Compose-Deklarationen und Ausnahme-Policies.
 
 ## Das Backup-System im Überblick
 
