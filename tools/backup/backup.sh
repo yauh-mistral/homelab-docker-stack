@@ -80,8 +80,8 @@ STAT_FILES=0
 STAT_BYTES=0
 PARTIALS=0
 WARTENDE_LUECKEN=()
-# Pfad-Dedupe: laufende Container teilen sich Mounts (z.B. ein
-# gemeinsames Download-Verzeichnis, ghost-Content bei ghost+activitypub). Jeder Host-Pfad wird nur
+# Pfad-Dedupe: laufende Container teilen sich Mounts (z.B. /opt/downloads bei
+# arr-stack, ghost-Content bei ghost+activitypub). Jeder Host-Pfad wird nur
 # einmal pro Lauf gesichert — im Kontext des ersten Containers, der ihn meldet.
 declare -A SEEN_PATHS=()
 declare -a RUN_CONTAINERS=()

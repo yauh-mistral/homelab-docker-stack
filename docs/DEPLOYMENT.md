@@ -112,7 +112,7 @@ sudo ls -la /mnt/systems/backups/<host>/litellm_db/db/*/
 sudo /opt/docker/tools/backup/backup.sh
 sudo grep FAIL /mnt/systems/backups/<host>/logs/<neuester-stamp>.log
 ```
-Einzelfehler isolieren andere Services nicht (Fehler-Isolation pro Deklaration). Stop-Fenster-Services (z.B. Media-Services mit SQLite, Home Assistant, Kuma …) sind kurz down — nachts cron-fähig.
+Einzelfehler isolieren andere Services nicht (Fehler-Isolation pro Deklaration). Stop-Fenster-Services (arr-Stack, Home Assistant, Mealie, Kuma …) sind kurz down — nachts cron-fähig.
 
 **SKIP-Semantik (Preflight):** Vor jedem Backup prüft der Dispatcher, ob die Quelle existiert (DB-Container via `docker inspect`, Dateipfade via Dateisystem). Ergebnis:
 
