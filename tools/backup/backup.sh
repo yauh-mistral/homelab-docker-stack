@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# backup.sh — Dispatcher des modularen Backup-Systems fuer Host ovi (v1.x).
+# backup.sh — Dispatcher des modularen Backup-Systems fuer den Docker-Host (v1.x).
 # Auto-Discovery: laufende Container werden erkannt, Bind-Mounts gesichert,
 # DB-Container gedumpt. Policies (policy.conf + policies.d/) steuern nur
 # Ausnahmen: Excludes, Stop-Fenster, SQLite/Forgejo, IGNORES.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # common.sh — Logging, Locking, Pfad-Handling, Stop/Start-Fenster, Restic-Wrapper
-# Teil des Backup-Systems fuer Host ovi. Wird von backup.sh / restore.sh gesourced.
+# Teil des Backup-Systems fuer den Docker-Host. Wird von backup.sh / restore.sh gesourced.
 # Keine Ausfuehrung standalone (kein shebang-Ausfuehrungspfad noetig, aber defensiv):
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
   echo "common.sh ist eine Bibliothek, nicht direkt ausfuehren." >&2
@@ -33,8 +33,8 @@ version_string() {
   fi
 }
 
-BACKUP_ROOT="${BACKUP_ROOT:-/mnt/systems/backups/ovi}"
-RESTIC_ROOT="${RESTIC_ROOT:-/mnt/systems/backups/ovi/restic}"
+BACKUP_ROOT="${BACKUP_ROOT:-/mnt/systems/backups/$(hostname)}"
+RESTIC_ROOT="${RESTIC_ROOT:-/mnt/systems/backups/$(hostname)/restic}"
 STACKS_DIR="${STACKS_DIR:-}"
 DRY_RUN="${DRY_RUN:-false}"
 VERBOSE="${VERBOSE:-false}"

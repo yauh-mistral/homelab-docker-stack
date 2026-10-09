@@ -4,7 +4,7 @@
 # /etc/backup.conf konfiguriert, nicht im Code.
 #
 # Usage:
-#   install.sh [--home /opt/docker/tools/backup] [--stacks-dir /pfad/zu/projects] [--backup-root /mnt/systems/backups/ovi]
+#   install.sh [--home /opt/docker/tools/backup] [--stacks-dir /pfad/zu/projects] [--backup-root /mnt/systems/backups/<host>]
 #
 set -u
 set -o pipefail
@@ -18,7 +18,7 @@ INSTALL_STAMP="$(date '+%Y-%m-%d %H:%M')"
 
 INSTALL_HOME="/opt/docker/tools/backup"
 STACKS_DIR="/opt/docker/arcane/projects"
-BACKUP_ROOT="/mnt/systems/ovi/backups"
+BACKUP_ROOT="/mnt/systems/$(hostname)/backups"
 CONF_FILE="/etc/backup.conf"
 
 while [[ $# -gt 0 ]]; do
