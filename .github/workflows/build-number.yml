@@ -1,6 +1,6 @@
 # build-number.yml — SCRIPT_BUILD (PR-Nummer) automatisch nachtragen
 # Beim Push auf main wird die PR-Nummer aus dem Merge-Commit-Subject "(#N)"
-# gelesen. Weicht sie von SCRIPT_BUILD in backup/lib/common.sh ab, wird die
+# gelesen. Weicht sie von SCRIPT_BUILD in tools/backup/lib/common.sh ab, wird die
 # Datei aktualisiert und direkt auf main committet. Damit zeigt jedes
 # Backup-/Restore-Log eindeutig den PR-Stand (v1.0.0+#<PR>).
 name: build-number
@@ -42,15 +42,15 @@ jobs:
         if: steps.pr.outputs.skip != 'true'
         run: |
           PR_NUM="${{ steps.pr.outputs.pr }}"
-          CURRENT="$(grep -m1 '^SCRIPT_BUILD=' backup/lib/common.sh | cut -d= -f2 | tr -d '\"')"
+          CURRENT="$(grep -m1 '^SCRIPT_BUILD=' tools/backup/lib/common.sh | cut -d= -f2 | tr -d '\"')"
           echo "Aktuell: '$CURRENT' / Merge: '$PR_NUM'"
           if [[ "$CURRENT" == "$PR_NUM" ]]; then
             echo "SCRIPT_BUILD ist bereits #$PR_NUM — nichts zu tun."
             exit 0
           fi
-          sed -i "s|^SCRIPT_BUILD=.*|SCRIPT_BUILD=\"$PR_NUM\"|" backup/lib/common.sh
+          sed -i "s|^SCRIPT_BUILD=.*|SCRIPT_BUILD=\"$PR_NUM\"|" tools/backup/lib/common.sh
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add backup/lib/common.sh
+          git add tools/backup/lib/common.sh
           git commit -m "chore: SCRIPT_BUILD=#$PR_NUM (automatisch von build-number Workflow)"
           git push
