@@ -1,4 +1,4 @@
-# Inventar — Backup-relevante Services auf Host `ovi`
+# Inventar — Backup-relevante Services auf dem Docker-Host
 
 Stand: 2026-10-08 (Quellen: `projects/*/compose.yaml`, `projects/*/.env.example`)
 

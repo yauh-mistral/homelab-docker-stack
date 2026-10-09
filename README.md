@@ -1,6 +1,6 @@
 # arcane-docker-stack
 
-Docker-Compose-Stacks und Backup-System für Host **`ovi`** (Ubuntu, Docker).
+Docker-Compose-Stacks und Backup-System für einen **Ubuntu-Docker-Host**.
 Kernstück ist **Arcane** — die Verwaltungsoberfläche, unter der alle Stacks als Projekte laufen. Dieses Repo beschreibt, pflegt und sichert die gesamte Docker-Landschaft des Hosts.
 
 > Arbeitssprache ist Deutsch. In-depth-Anleitungen (Deploy, Konfiguration, Services hinzufügen/entfernen, Backup, Restore) liegen in [`docs/`](docs/) — dieses README gibt den Überblick über Komponenten und Möglichkeiten.
@@ -40,37 +40,31 @@ Kernstück ist **Arcane** — die Verwaltungsoberfläche, unter der alle Stacks 
 
 ## Zusammenhänge (Diagramm)
 
+Runtime-Sicht auf dem Docker-Host — welche Datenarten es pro Stack/Service gibt und was davon ins Backup fällt (`*` = gesichert):
+
 ```mermaid
-flowchart LR
-
-    subgraph ovi["Docker-Host ovi"]
-        B["tools/arcane/compose.yml<br/>(Projekt 'base')"] -->|"startet (Bootstrap)"| A
-        A["Arcane (Verwaltung)"] -->|"verwaltet als Projekte"| S["Compose-Stacks<br/>(projects/*)"]
-        S --- CFG[("Config-Daten (Host)<br/>/opt/docker/&lt;service&gt;/<br/>Bind-Mounts — gesichert")]
-        S -.->|".env (nur Host)"| E["stack-.env auf dem Host"]
+flowchart TB
+    subgraph host["Docker-Host (Ubuntu)"]
+        direction TB
+        A["Arcane (Verwaltung)<br/>Bootstrap: tools/arcane/compose.yml"]
+        A --> S["Compose-Stacks (projects/*)"]
+        S --> STK["Stack / Service"]
+        STK --> BD[("Bind-Mounts *<br/>/opt/docker/&lt;stack&gt;/<br/>Configs + DB-Daten")]
+        STK --> DB[("Datenbanken *<br/>als DB-Dump<br/>(Postgres, MySQL/MariaDB, SQLite)")]
+        STK -.-> MF[("Media-Files<br/>NFS-Mounts /mnt/...<br/>NAS-eigenes Backup")]
     end
 
-    subgraph nas["NAS-Host (NFS)"]
-        MEDIA[("Medien-Daten (NFS)<br/>/mnt/immich, /mnt/media, ...<br/>NAS-eigenes Backup — nicht gesichert")]
-        BKPTGT[("Backup-Ziel<br/>/mnt/systems/ovi/backups")]
+    subgraph nas["NAS (extern, NFS)"]
+        NAS[("NAS-Speicher<br/>Media-Mounts + Backup-Ziel<br/>/mnt/systems/&lt;host&gt;/backups")]
     end
 
-    subgraph backupsys["Backup-System (tools/backup/)"]
-        D["backup.sh Dispatcher<br/>(Auto-Discovery)"]
-        P["policies.d/*.env<br/>(Ausnahmen)"]
-        T["test-restore.sh"]
-    end
-
-    S ---|"NFS-Mounts (Medien)"| MEDIA
-    D -->|"liest Container, Mounts,<br/>ENV-Credentials"| ovi
-    P --> D
-    D -->|"rsync + DB-Dumps<br/>Rotation v.0..v.13"| BKPTGT
-    D -->|"Dump-Test"| T
-    C["Cron (nächtlich 02:30)"] -->|"flock-gesichert"| D
-    M["Cron (So 04:30)"] -.->|"Maintenance: prune (inkl. Volumes)"| ovi
+    BD -->|"rsync (Rotation v.0..v.13)"| NAS
+    DB -->|"DB-Dumps"| NAS
+    MF -.-|"gleiche NFS-Freigabe"| NAS
 ```
 
-Das Diagramm zeigt die Daten-Trennung: **Config-Daten** leben als Bind-Mounts auf dem Docker-Host (`/opt/docker/...` — vom Backup-System gesichert), **Medien-Daten** auf dem NAS (NFS-Mounts — vom NAS-eigenen Backup abgedeckt), und das **Backup-Ziel** ist ein eigener NAS-Bereich. Kernprinzip: **Die Wahrheit der Services lebt in Docker** (Container, Mounts, ENV) — nicht im Repo. Der Backup-Dispatcher entdeckt alles laufende selbst; das Repo liefert nur Struktur, Compose-Deklarationen und Ausnahme-Policies.
+- `*` = vom Backup-System gesichert. Bind-Mounts und Datenbanken pro Stack/Service sind optional — nicht jeder Service hat alle drei Datenarten.
+- Media-Files liegen auf NAS-Mounts und sind **nicht** Bestandteil des Backups (NAS-eigenes Backup).
 
 ## Das Backup-System im Überblick
 
@@ -89,7 +83,7 @@ Details: [`docs/BACKUP-STRATEGIE.md`](docs/BACKUP-STRATEGIE.md) · [`docs/RESTOR
 cd /opt/docker/arcane && sudo git pull
 sudo tools/backup/install.sh --home /opt/docker/tools/backup \
      --stacks-dir /opt/docker/arcane/projects \
-     --backup-root /mnt/systems/ovi/backups
+     --backup-root /mnt/systems/&lt;host&gt;/backups
 
 # Testen
 sudo /opt/docker/tools/backup/backup.sh --dry-run       # nichts schreiben, nur planen
@@ -97,7 +91,7 @@ sudo /opt/docker/tools/backup/backup.sh                 # echter Lauf
 sudo /opt/docker/tools/backup/test-restore.sh --all     # Restore-Fähigkeit prüfen
 ```
 
-### Nächtclicher Cron (auf ovi, root-Crontab)
+### Nächtclicher Cron (auf dem Docker-Host, root-Crontab)
 
 ```cron
 30 2 * * * /usr/bin/flock -n /tmp/backup-dispatcher.lock /opt/docker/tools/backup/backup.sh >> /var/log/backup-dispatcher.log 2>&1

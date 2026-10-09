@@ -7,14 +7,14 @@ Offene Punkte als klare Todos; historische Annahmen sind zu Entscheidungen verdi
 - [ ] **restore.sh testen & verifizieren** — wurde bisher nie getestet. Nur `test-restore.sh` (DB-Dumps in Wegwerf-Postgres) läuft grün; der echte Datei-/DB-Restore über `restore.sh` ist unverifiziert. Geplant: Restore einzelner Services in eine isolated Umgebung (Wegwerf-Container, eigenes Zielverzeichnis), nie gegen das Live-System.
 - [ ] **Mermaid-Diagramm auf GitHub verifizieren** — nach Merge des Entity/Link-Fixes prüfen, dass das README-Diagramm rendert.
 - [ ] **SemVer-Übergang (Phase 2)** — E2E-Kriterium ist erfüllt (Discovery → Dry-Run → echter Lauf → `test-restore.sh --all` alles grün). Übergang von `v1.0.0` auf Semantic Versioning ist ein User-Entscheid; vermutlich `v1.1.0` beim nächsten inhaltlichen PR.
-- [ ] **Cron auf ovi bestätigen** — Cron-Zeile ist geliefert und im README dokumentiert; Eintrag in der root-Crontab noch unbestätigt.
+- [ ] **Cron auf dem Docker-Host bestätigen** — Cron-Zeile ist geliefert und im README dokumentiert; Eintrag in der root-Crontab noch unbestätigt.
 
 ## Erledigt / entschieden (compact)
 
 ### Backup-Architektur (v1.0.0, E2E-getestet)
 
 - Auto-Discovery aus laufenden Containern ersetzt statische Deklarationen; Stacks als Projekte unter Arcane; Quelle der Wahrheit ist Docker, nicht das Repo (#1, #2).
-- Zielpfad `/mnt/systems/ovi/backups` (Freiraum für weitere Hosts); NAS-Mounts sind nie Backup-Quelle (#3, #57).
+- Zielpfad `/mnt/systems/<host>/backups` (Freiraum für weitere Hosts); NAS-Mounts sind nie Backup-Quelle (#3, #57).
 - Rotation rsnapshot-artig `v.0..v.13` mit Hardlink-Dedupe (`--link-dest=v.1`); KEEP_VERSIONS ersetzt alte Zeitstempel-/Monatslogik (#48–#50, #26).
 - Restore-Testskript deckt Postgres ab (testet v.0, pg_dumpall-Dumps in Original-DB); MySQL/MariaDB-Test analog ergänzbar, Bedarf klären (#23).
 
@@ -32,7 +32,7 @@ Offene Punkte als klare Todos; historische Annahmen sind zu Entscheidungen verdi
 - Forgejo: `forgejo dump --skip-repository` (DB+Config) + rsync der Repos — keine Doppel-Sicherung; Mirror-Repos bleiben bewusst drin (7G sind ok), Hardlink-Dedupe macht Folgeläufe günstig (#59, #60, #61).
 - NAS-Regel: alles unter `/mnt/*` ist vom NAS-eigenen Backup abgedeckt, Dispatcher-Guard lehnt `/mnt/*`-Pfade ab (#57).
 
-### Robustheit (umgesetzt, auf ovi verifiziert)
+### Robustheit (umgesetzt, auf dem Docker-Host verifiziert)
 
 - Preflight-Checks, Docker-Daemon-Guard, Teil-Backup als WARN statt FAIL, SKIP bei nicht deploytem Service (#40–#42).
 - Vaultwarden: kein sqlite3 im Image → Hilfscontainer-Fallback (`keinos/sqlite3`) liest die DB aus dem aufgelösten Bind-Mount (#55, #10).
