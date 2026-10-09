@@ -31,8 +31,8 @@ services:
       - PGID=999
       - ENCRYPTION_KEY=REPLACE_ME
       - JWT_SECRET=REPLACE_ME
-      - VIRTUAL_HOST=arcane.islasorna.de
-      - LETSENCRYPT_HOST=arcane.islasorna.de
+      - VIRTUAL_HOST=arcane.meine-domain.de
+      - LETSENCRYPT_HOST=arcane.meine-domain.de
       - VIRTUAL_PORT=3552
     networks:
       - shared_proxy
