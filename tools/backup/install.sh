@@ -18,7 +18,7 @@ INSTALL_STAMP="$(date '+%Y-%m-%d %H:%M')"
 
 INSTALL_HOME="/opt/docker/tools/backup"
 STACKS_DIR="/opt/docker/arcane/projects"
-BACKUP_ROOT="/mnt/systems/ovi/backup"
+BACKUP_ROOT="/mnt/systems/ovi/backups"
 CONF_FILE="/etc/backup.conf"
 
 while [[ $# -gt 0 ]]; do

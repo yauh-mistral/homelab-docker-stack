@@ -121,9 +121,7 @@ sudo /opt/docker/tools/backup/test-restore.sh --all   # alle Postgres-Services
 sudo crontab -e
 ```
 ```cron
-0 2 * * * /opt/docker/tools/backup/backup.sh --only-db >> /mnt/systems/backups/ovi/_meta/cron.log 2>&1
-30 2 * * * /opt/docker/tools/backup/backup.sh >> /mnt/systems/backups/ovi/_meta/cron.log 2>&1
-0 3 * * 0 /opt/docker/tools/backup/backup.sh --only-config >> /mnt/systems/backups/ovi/_meta/cron.log 2>&1
+30 2 * * * /usr/bin/flock -n /tmp/backup-dispatcher.lock /opt/docker/tools/backup/backup.sh >> /var/log/backup-dispatcher.log 2>&1
 30 4 * * 0 /opt/docker/tools/maintenance/docker-maintenance.sh >> /var/log/docker-maintenance.log 2>&1
 ```
 
