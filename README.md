@@ -9,17 +9,18 @@ Kernstück ist **Arcane** — die Verwaltungsoberfläche, unter der alle Stacks 
 
 | Komponente | Ort | Zweck |
 |---|---|---|
-| **Arcane** (Verwaltung) | `/opt/docker/tools/arcane/compose.yml` (Host) | Docker-Verwaltungsoberfläche; verwaltet alle Compose-Stacks als Projekte. **Selbst-Bootstrap**: Arcane kann sich nicht selbst verwalten — es läuft aus einem host-seitigen Compose-File (Repo: `tools/arcane/compose.yml`, Host-Installation `/opt/docker/tools/arcane/compose.yml`, Projektname `base`). Daten als Bind-Mount unter `/opt/docker/arcane/` |
+| **Arcane** (Verwaltung) | `bootstrap/compose.yml` (Repo) | Docker-Verwaltungsoberfläche; verwaltet alle Compose-Stacks als Projekte. **Selbst-Bootstrap**: Arcane kann sich nicht selbst verwalten — es läuft aus einem host-seitigen Compose-File (Repo: `bootstrap/compose.yml`, Host-Installation `/opt/docker/compose/compose.yml`, Projektname `base`). Daten als Bind-Mount unter `/opt/docker/arcane/` |
 | **Compose-Stacks** | `projects/<stack>/` | Deklaration aller Services: `compose.yaml` + `.env.example`. Die echten `.env`-Dateien leben **nur auf dem Host** (`/opt/docker/arcane/projects/<stack>/.env`) — nie im Repo |
 | **Backup-System** | `tools/backup/` | Auto-Discovery-Backup: sichert alle laufenden Container (Dateien + DB-Dumps) auf das NAS. Installiert nach `/opt/docker/tools/backup` via `install.sh` |
 | **Docker-Maintenance** | `tools/maintenance/` | Host-Pflege: prune von ungenutzten Images, gestoppten Containern, Netzwerken und Volumes (bewusst, nicht rebuildbar — nie parallel zu Backups). Installiert nach `/opt/docker/tools/maintenance` |
+| **Bootstrap (Arcane)** | `bootstrap/compose.yml` | Arcane-Bootstrap — von Hand zu pflegen (Secrets!), wird vom Installer **nicht** angefasst. Host: `/opt/docker/compose/compose.yml` (Projekt `base`) |
 | **Dokumentation** | `docs/` | In-depth-Referenz: Deployment, Backup-Strategie, Restore, Inventar, Todos & Entscheidungen |
 
 ## Die Stacks (projects/)
 
 | Stack | Services (Auswahl) | Zweck |
 |---|---|---|
-| — | arcane | Verwaltung aller Projekte (Kernstück). **Hinweis:** Arcane läuft **nicht** aus `projects/` (kein `projects/arcane`-Verzeichnis), sondern aus dem host-seitigen Compose-File `tools/arcane/compose.yml` (Host: `/opt/docker/tools/arcane/compose.yml`, Projekt `base`) — es kann sich nicht selbst hosten („Bootstrap-Problem"). Der Container: `ghcr.io/getarcaneapp/arcane:latest`, Mounts auf `/opt/docker/arcane/data` und `/opt/docker/arcane/projects` |
+| — | arcane | Verwaltung aller Projekte (Kernstück). **Hinweis:** Arcane läuft **nicht** aus `projects/` (kein `projects/arcane`-Verzeichnis), sondern aus dem host-seitigen Compose-File `bootstrap/compose.yml` (Host: `/opt/docker/compose/compose.yml`, Projekt `base`) — es kann sich nicht selbst hosten („Bootstrap-Problem"). Der Container: `ghcr.io/getarcaneapp/arcane:latest`, Mounts auf `/opt/docker/arcane/data` und `/opt/docker/arcane/projects` |
 | `arr-stack` | sonarr, radarr, lidarr, bazarr, prowlarr, sabnzbd, overseerr | PVR/Media-Automation |
 | `media` | plex, tautulli, audiobookshelf, metube, calibre-web, codex, tdarr | Medienserver & -verarbeitung |
 | `smarthome` | homeassistant, music-assistant, mosquitto, matter-server | Hausautomatisierung |
@@ -46,7 +47,7 @@ Runtime-Sicht auf dem Docker-Host — welche Datenarten es pro Stack/Service gib
 flowchart TB
     subgraph host["Docker-Host (Ubuntu)"]
         direction TB
-        A["Arcane (Verwaltung)<br/>Bootstrap: tools/arcane/compose.yml"]
+        A["Arcane (Verwaltung)<br/>Bootstrap: bootstrap/compose.yml"]
         A --> S["Compose-Stacks (projects/*)"]
         S --> STK["Stack / Service"]
         STK --> BD[("Bind-Mounts *<br/>/opt/docker/&lt;stack&gt;/<br/>Configs + DB-Daten")]
@@ -113,14 +114,16 @@ arcane-docker-stack/
 │   ├── immich/
 │   └── ...
 ├── tools/
-│   ├── arcane/
 │   ├── backup/
 │   └── maintenance/
+├── bootstrap/
+│   └── compose.yml
 └── docs/
 ```
 
 - **projects/** — je Stack ein Verzeichnis (`compose.yaml`, optional `.env.example`), plus `env-details.md` (Secret-/Format-Konventionen)
-- **tools/** — Host-Tools: `arcane/` (Bootstrap-Compose), `backup/` (Backup-System), `maintenance/` (Docker-Pflege)
+- **tools/** — Host-Tools (Installer: `tools/backup/install.sh` → `/opt/docker/tools/`): `backup/` (Backup-System), `maintenance/` (Docker-Pflege)
+- **bootstrap/** — Compose-File für den Arcane-Bootstrap (nicht Teil des Installers — enthält Secrets, von Hand zu pflegen; Host: `/opt/docker/compose/compose.yml`)
 - **docs/** — In-depth-Dokumentation
 
 ## Doku-Verteilung (weniger Redundanz)

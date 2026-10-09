@@ -4,10 +4,10 @@
 # oberflaeche kann den Compose-Stack, der sie selbst startet, nicht verwalten.
 # Deshalb laeuft Arcane aus diesem host-seitigen Compose-File ausserhalb der
 # Arcane-verwalteten Projekte. Installationsort auf dem Host:
-#   /opt/docker/tools/arcane/compose.yml  (Compose-Projektname: base)
+#   /opt/docker/compose/compose.yml  (Compose-Projektname: base)
 #
 # Deploy/Update von Hand:
-#   cd /opt/docker/tools/arcane && docker compose pull && docker compose up -d
+#   cd /opt/docker/compose && docker compose pull && docker compose up -d
 #
 # Secrets: ENCRYPTION_KEY und JWT_SECRET sind Platzhalter — auf dem Host
 # echte Werte einsetzen (openssl rand -hex 32). Keine echten Werte im Repo.
