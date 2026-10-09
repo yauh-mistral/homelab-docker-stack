@@ -44,8 +44,8 @@ flowchart LR
     subgraph host["Host ovi (/opt/docker)"]
         B["/opt/docker/compose/compose.yml<br/>(Projekt 'base', Host-Compose)"] -->|"startet (Bootstrap — Arcane<br/>kann sich nicht selbst hosten)"| A
         A["Arcane<br/>(Verwaltung)"] -->|"verwaltet als Projekte"| S["Compose-Stacks<br/>(projects/*)"]
-        S --- B[("/opt/docker/&lt;service&gt;/<br/>Bind-Mount-Daten")]
-        S -.->|".env (nur Host)| E["/opt/docker/arcane/projects/&lt;stack&gt;/.env"]
+        S --- BD[("/opt/docker - Bind-Mount-Daten")]
+        S -.->|".env (nur Host)"| E["stack-.env auf dem Host"]
     end
 
     subgraph backupsys["Backup-System (backup/)"]
