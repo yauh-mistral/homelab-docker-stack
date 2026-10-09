@@ -133,6 +133,16 @@ In-depth-Doku in `docs/`: [`DEPLOYMENT.md`](docs/DEPLOYMENT.md) (Installation, C
 
 Regel: **README = Überblick, docs/ = Schritt für Schritt.**
 
+## Sicherheit & Vertrauensannahmen
+
+Dies ist ein Single-Host-Homelab-Setup. Die folgenden Vertrauensannahmen sind bewusst Teil des Designs — wer sie nicht teilt, braucht Verschlüsselung (siehe unten):
+
+- **`.env`-Dateien liegen unverschlüsselt auf dem Host** unter `/opt/docker/arcane/projects/<stack>/.env` (enthält DB-Passwörter, API-Keys, Secrets). Schutz: Dateirechte (`chmod 600`), nie im Repo (nur `.env.example`), Host-Zugriff nur über Arcane/SSH.
+- **Backups sind unverschlüsselt** — insbesondere die DB-Dumps (`*.sql.gz`, `forgejo-dump.zip`, SQLite-Kopien) enthalten alle Daten im Klartext.
+- **Angenommen wird**: Docker-Host (inkl. root) und NAS-Speicherort (`/mnt/systems/<host>/backups`, NFS) sind vertrauenswürdig; unbefugter Zugriff auf Host oder NAS steht außerhalb des Bedrohungsmodells.
+
+**Wer diese Annahmen nicht treffen kann/will** (z.B. Cloud-Backup, off-site Kopien, fremder Storage), sollte vor der Ablage verschlüsseln — z.B. via Restic (`USE_RESTIC`-Hook in `lib/common.sh`, heute ausgeschaltet) oder ein Encrypted-Overlay (gocryptfs). Das ist aktuell nicht umgesetzt und in [`TODOS.md`](docs/TODOS.md) nicht vorgemerkt — Aufwand wäre ein eigener PR.
+
 ## Zusammenarbeit
 
 Siehe [`AGENTS.md`](AGENTS.md) — Ziel/Umgebung, Git/PR-Workflow, Versionierung, .env-Konventionen, Backup-Design und Stil sind dort verbindlich dokumentiert.
