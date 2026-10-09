@@ -59,7 +59,7 @@ Für als `ignore` deklarierte Services (crawl4ai, firecrawl, metube, Media-Libra
 
 ## Restore-Test (halbautomatisch)
 
-`backup/test-restore.sh [service]` — spielt den Dump in einen Wegwerf-`postgres:16-alpine`-Container ein und prüft, dass Tabellen entstehen. Empfehlung: monatlich für alle Postgres-Services (`--all`) ausführen; Ergebnis im Lauf-Log dokumentieren.
+`backup/test-restore.sh` — spielt die Dumps aller DB-Services (Postgres und MariaDB) in Wegwerf-Container ein und prüft, dass Tabellen entstehen. Einzelner Service als Argument, `--dry-run` zeigt die Testliste. Empfehlung: monatlich ausführen; Ergebnis im Lauf-Log dokumentieren.
 
 ## Checkliste nach jedem Restore
 

@@ -18,7 +18,7 @@ Die Wahrheit der Services lebt in Docker (Container, Mounts, ENV) — nicht im R
 - `policy.conf` — globale Defaults (IGNORE_PATH_PREFIXES, DEFAULT_FILE_EXCLUDES).
 - `policies.d/<project>.env` / `policies.d/<container>.env` — Ausnahmen; Container-Policy gewinnt.
 - `restore.sh <container>` — nutzt dieselbe Discovery+Policy; Restore pro Container.
-- `test-restore.sh` — Dump-Qualitaetstest in Wegwerf-Postgres.
+- `test-restore.sh` — Dump-Qualitaetstest in Wegwerf-Containern (Postgres + MariaDB); ohne Argument werden alle DB-Services getestet, einzelner Service als Argument.
 
 ## Rotation & Retention
 
