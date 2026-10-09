@@ -16,26 +16,26 @@ Kernstück ist **Arcane** — die Verwaltungsoberfläche, unter der alle Stacks 
 | **Bootstrap (Arcane)** | `bootstrap/compose.yml` | Arcane-Bootstrap — von Hand zu pflegen (Secrets!), wird vom Installer **nicht** angefasst. Host: `/opt/docker/compose/compose.yml` (Projekt `base`) |
 | **Dokumentation** | `docs/` | In-depth-Referenz: Deployment, Backup-Strategie, Restore, Inventar, Todos & Entscheidungen |
 
-## Die Stacks (projects/)
+## Stacks & Services (projects/)
 
-| Stack | Services (Auswahl) | Zweck |
-|---|---|---|
-| — | arcane | Verwaltung aller Projekte (Kernstück). **Hinweis:** Arcane läuft **nicht** aus `projects/` (kein `projects/arcane`-Verzeichnis), sondern aus dem host-seitigen Compose-File `bootstrap/compose.yml` (Host: `/opt/docker/compose/compose.yml`, Projekt `base`) — es kann sich nicht selbst hosten („Bootstrap-Problem"). Der Container: `ghcr.io/getarcaneapp/arcane:latest`, Mounts auf `/opt/docker/arcane/data` und `/opt/docker/arcane/projects` |
-| `arr-stack` | sonarr, radarr, lidarr, bazarr, prowlarr, sabnzbd, overseerr | PVR/Media-Automation |
-| `media` | plex, tautulli, audiobookshelf, metube, calibre-web, codex, tdarr | Medienserver & -verarbeitung |
-| `smarthome` | homeassistant, music-assistant, mosquitto, matter-server | Hausautomatisierung |
-| `monitoring` | dashdot, uptime-kuma, grafana, shynet | Überwachung & Analytics |
-| `local-ai` | litellm, crawl4ai, valkey, searxng | Selbstgehostete KI/LLM-Infrastruktur |
-| `content` | homepage, 5etools | Statische Inhalte |
-| `infra` | omada-controller, crowdsec | Netzwerk & Security |
-| `web-proxy` | nginx, acme | Reverse-Proxy + TLS-Zertifikate |
-| `forgejo` (+ Runner) | forgejo, forgejo-runner | Git-Hosting & CI |
-| `ghost` | ghost, ghost-mysql, ghost-activitypub | Blog |
-| `immich` | immich, immich_postgres | Foto-Management |
-| `vaultwarden` | vaultwarden (SQLite) | Passwort-Manager |
-| `castopod` | castopod_app, castopod_mariadb, castopod_redis | Podcast |
-| `wanderer` | wanderer (app, db, search, web) | Routenplanung (Hiking) |
-| `analytics` | shynet (analytics-db) | Web-Analytics |
+**Begriffe:**
+
+- **Stack (= Compose-Projekt)**: ein Verzeichnis unter `projects/<stack>/` mit einem `compose.yaml` — eine in sich abgeschlossene Anwendung (z.B. `ghost`). Arcane verwaltet jeden Stack als Compose-Projekt.
+- **Service (= Container)**: ein einzelner Container innerhalb eines Stacks (z.B. `ghost-mysql`). Der `container_name` ist der Name, den Backup/Restore als `--service` erwarten.
+
+Die konkrete Stack-Auswahl ist bei jedem Host anders — das Backup-System arbeitet mit **Auto-Discovery** und hat keine feste Service-Liste. Exemplarisch (Auswahl):
+
+| Stack | Services (Beispiel) | Zweck | DB-Typ |
+|---|---|---|---|
+| `ghost` | ghost, ghost-mysql, ghost-activitypub | Blog | MySQL |
+| `media` | Medienserver & -verarbeitung (mehrere Datei-Services) | Media | SQLite (Stop-Fenster) |
+| `smarthome` | homeassistant, music-assistant, mosquitto, matter-server | Hausautomatisierung | — |
+| `web-proxy` | nginx, acme | Reverse-Proxy + TLS-Zertifikate | — |
+| `vaultwarden` | vaultwarden | Passwort-Manager | SQLite (Datei-Backup mit `sqlite3 .backup`) |
+
+Weitere bei diesem Host genutzte DB-Typen: **Postgres** (z.B. Foto-Management, KI-Infrastruktur) und **MariaDB** (z.B. Podcast) — die Discovery erkennt `postgres`, `mysql`/`mariadb` und SQLite-Container automatisch.
+
+**Hinweis zu Arcane:** Arcane läuft **nicht** aus `projects/` (kein `projects/arcane`-Verzeichnis), sondern aus dem host-seitigen Compose-File `bootstrap/compose.yml` (Host: `/opt/docker/compose/compose.yml`, Projekt `base`) — es kann sich nicht selbst hosten („Bootstrap-Problem“). Der Container: `ghcr.io/getarcaneapp/arcane:latest`, Mounts auf `/opt/docker/arcane/data` und `/opt/docker/arcane/projects`.
 
 **Konvention:** Jeder Stack hat ein `compose.yaml`. Nutzdaten liegen als Bind-Mounts unter `/opt/docker/<stack>/` (z.B. `/opt/docker/ghost/` für den gesamten ghost-Stack inkl. aller Services). Docker-Volumes werden **nie** für zu sichernde Daten genutzt; NAS-Mounts (`/mnt/...`) sind nie Backup-Quelle.
 

@@ -40,7 +40,7 @@ Das Backup-Verhalten ist drei Ebenen konfigurierbar — spätere Ebenen gewinnen
 |---|---|
 | `SVC_IGNORE=true` | Container komplett aus dem Backup ausschließen |
 | `EXTRA_FILE_PATHS=( ... )` | Zusätzliche Pfade sichern (über die entdeckten Mounts hinaus) |
-| `EXTRA_FILE_EXCLUDES=( ... )` | Zusätzliche Excludes (z.B. `MediaCover/ Backups/` bei arr-Services, Plex-Caches) |
+| `EXTRA_FILE_EXCLUDES=( ... )` | Zusätzliche Excludes (z.B. Cover-Caches, Plex-Metadaten-Caches) |
 | `STOP_SELF=true` | Stop-Fenster: Container während des Datei-Backups stoppen (konsistente SQLite/Dateien) |
 | `KEEP_FILES=true` | DB-Container-Rohdaten zusätzlich als Dateien sichern |
 | `DB_DUMP_ALL=true` | `pg_dumpall` statt `pg_dump` (ganzer Cluster, z.B. immich) |
