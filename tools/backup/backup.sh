@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# backup.sh — Dispatcher des modularen Backup-Systems fuer den Docker-Host (v1.x).
-# Auto-Discovery: laufende Container werden erkannt, Bind-Mounts gesichert,
-# DB-Container gedumpt. Policies (policy.conf + policies.d/) steuern nur
-# Ausnahmen: Excludes, Stop-Fenster, SQLite/Forgejo, IGNORES.
+# backup.sh — Dispatcher of the modular backup system for the Docker host (v1.x).
+# Auto-discovery: running containers are detected, bind mounts backed up,
+# DB containers dumped. Policies (policy.conf + policies.d/) only control
+# exceptions: excludes, stop windows, SQLite/Forgejo, IGNORES.
 #
 # Usage:
 #   backup.sh [--dry-run] [--only-db] [--only-files] [--service CONTAINER] [--project STACK]
 #   backup.sh --list
-#   backup.sh --discover            # nur Inventar anzeigen, kein Backup
+#   backup.sh --discover            # show inventory only, no backup
 #
 set -u
 set -o pipefail
@@ -21,7 +21,7 @@ source "$SCRIPT_DIR/lib/db.sh"
 source "$SCRIPT_DIR/lib/discovery.sh"
 
 # ----------------------------------------------------------------------
-# Optionen parsen
+# Parse options
 # ----------------------------------------------------------------------
 ONLY_DB=false; ONLY_FILES=false; SERVICE_FILTER=""; PROJECT_FILTER=""; LIST=false; DISCOVER=false
 while [[ $# -gt 0 ]]; do
@@ -29,48 +29,48 @@ while [[ $# -gt 0 ]]; do
     --dry-run)     DRY_RUN=true ;;
     --only-db)     ONLY_DB=true ;;
     --only-files)  ONLY_FILES=true ;;
-    --service)     shift; SERVICE_FILTER="${1:?--service braucht einen Containernamen}" ;;
-    --project)     shift; PROJECT_FILTER="${1:?--project braucht einen Stack-Namen (Compose-Projekt)}" ;;
+    --service)     shift; SERVICE_FILTER="${1:?--service requires a container name}" ;;
+    --project)     shift; PROJECT_FILTER="${1:?--project requires a stack name (compose project)}" ;;
     --list|--discover) LIST=true; DISCOVER=true ;;
     -h|--help)     sed -n '2,13p' "$0"; exit 0 ;;
-    *) echo "Unbekannte Option: $1" >&2; exit 2 ;;
+    *) echo "Unknown option: $1" >&2; exit 2 ;;
   esac
   shift
 done
 
-# /etc/backup.conf zuerst laden (setzt Quelle/Ziel: STACKS_DIR, BACKUP_ROOT, ...)
-# Reihenfolge: CLI-Flag > /etc/backup.conf > Defaults aus lib/common.sh
+# Load /etc/backup.conf first (sets source/target: STACKS_DIR, BACKUP_ROOT, ...)
+# Order of precedence: CLI flag > /etc/backup.conf > defaults from lib/common.sh
 if [[ -f /etc/backup.conf ]]; then
   # shellcheck disable=SC1091
   source /etc/backup.conf
 fi
 
-# Zentrale Policy-Defaults laden (ALLOW_PATH_PREFIXES, DEFAULT_FILE_EXCLUDES, ...)
+# Load central policy defaults (ALLOW_PATH_PREFIXES, DEFAULT_FILE_EXCLUDES, ...)
 # shellcheck source=../policy.conf
 source "$SCRIPT_DIR/policy.conf"
 POLICY_DIR="${POLICY_DIR:-$SCRIPT_DIR/policies.d}"
-[[ -d "$POLICY_DIR" ]] || { echo "policies.d nicht gefunden: $POLICY_DIR" >&2; exit 2; }
+[[ -d "$POLICY_DIR" ]] || { echo "policies.d not found: $POLICY_DIR" >&2; exit 2; }
 
 log_init
 _acquire_lock
 log_info "Version ($(version_string))"
-log_info "Dispatcher start: Auto-Discovery, dry-run=$DRY_RUN, Ziel=$BACKUP_ROOT"
+log_info "Dispatcher start: auto-discovery, dry-run=$DRY_RUN, target=$BACKUP_ROOT"
 log_info "Policy: ALLOW_PATH_PREFIXES=[${ALLOW_PATH_PREFIXES[*]:-}] DEFAULT_FILE_EXCLUDES=[${DEFAULT_FILE_EXCLUDES[*]:-}]"
 
 if [[ "$DRY_RUN" != "true" ]]; then
   if ! docker_available; then
-    log_fail "Abbruch: Docker-Daemon nicht erreichbar (docker info fehlgeschlagen)"
+    log_fail "Aborting: Docker daemon not reachable (docker info failed)"
     exit 1
   fi
   if ! require_mounted_target "$BACKUP_ROOT"; then
-    log_fail "Abbruch: Backup-Ziel $BACKUP_ROOT ist nicht als NAS-Mount verfuegbar"
+    log_fail "Aborting: backup target $BACKUP_ROOT is not available as a NAS mount"
     exit 1
   fi
-  mkdir -p "$BACKUP_ROOT/logs" || { log_fail "Abbruch: Kann $BACKUP_ROOT/logs nicht anlegen"; exit 1; }
+  mkdir -p "$BACKUP_ROOT/logs" || { log_fail "Aborting: cannot create $BACKUP_ROOT/logs"; exit 1; }
 fi
 
 # ----------------------------------------------------------------------
-# Discovery: alle laufenden Container -> Backup-Einheiten
+# Discovery: all running containers -> backup units
 # ----------------------------------------------------------------------
 FAILS=0
 OKS=0
@@ -79,15 +79,15 @@ STAT_DUMPS=0
 STAT_FILES=0
 STAT_BYTES=0
 PARTIALS=0
-WARTENDE_LUECKEN=()
-# Pfad-Dedupe: laufende Container teilen sich Mounts (z.B. ein
-# gemeinsames Download-Verzeichnis, ghost-Content bei ghost+activitypub). Jeder Host-Pfad wird nur
-# einmal pro Lauf gesichert — im Kontext des ersten Containers, der ihn meldet.
+OPEN_GAPS=()
+# Path dedupe: running containers share mounts (e.g. a shared
+# downloads directory, ghost content between ghost+activitypub). Each host path is backed up
+# only once per run — in the context of the first container reporting it.
 declare -A SEEN_PATHS=()
 declare -a RUN_CONTAINERS=()
 
 if [[ "$DRY_RUN" != "true" && ! docker_available ]]; then
-  log_fail "Abbruch: Docker nicht verfuegbar"
+  log_fail "Aborting: Docker not available"
   exit 1
 fi
 
@@ -97,13 +97,13 @@ while IFS= read -r SVC_CTR; do
 done < <(discover_containers)
 
 if [[ ${#RUN_CONTAINERS[@]} -eq 0 ]]; then
-  log_fail "Keine laufenden Container gefunden — nichts zu tun"
+  log_fail "No running containers found — nothing to do"
   exit 1
 fi
 
-log_info "Discovery: ${#RUN_CONTAINERS[@]} laufende Container gefunden"
+log_info "Discovery: ${#RUN_CONTAINERS[@]} running containers found"
 
-# Filter nach CLI
+# CLI filters
 should_process() {
   if [[ -n "$SERVICE_FILTER" && "$SVC_NAME" != "$SERVICE_FILTER" ]]; then return 1; fi
   if [[ -n "$PROJECT_FILTER" && "${SVC_PROJECT:-}" != "$PROJECT_FILTER" ]]; then return 1; fi
@@ -127,8 +127,8 @@ validate_service() {
   case "$SVC_CATEGORY" in
     db_only|db_and_files)
       if ! container_running "$DB_CONTAINER"; then
-        log_warn "$SVC_NAME: DB-Container '$DB_CONTAINER' laeuft nicht"
-        WARTENDE_LUECKEN+=("DB-Container laeuft nicht: $DB_CONTAINER ($SVC_NAME)")
+        log_warn "$SVC_NAME: DB container '$DB_CONTAINER' is not running"
+        OPEN_GAPS+=("DB container not running: $DB_CONTAINER ($SVC_NAME)")
         SVC_DB_OK=false
       fi
       ;;
@@ -136,8 +136,8 @@ validate_service() {
   for p in "${FILE_PATHS[@]:-}"; do
     [[ -z "$p" ]] && continue
     if [[ ! -e "$p" ]]; then
-      log_warn "$SVC_NAME: Quellpfad existiert nicht: $p"
-      WARTENDE_LUECKEN+=("Quellpfad fehlt: $p ($SVC_NAME)")
+      log_warn "$SVC_NAME: source path does not exist: $p"
+      OPEN_GAPS+=("Source path missing: $p ($SVC_NAME)")
       SVC_FILES_OK=false
     fi
   done
@@ -145,7 +145,7 @@ validate_service() {
 }
 
 # ----------------------------------------------------------------------
-# Backup-Phase pro Container
+# Backup phase per container
 # ----------------------------------------------------------------------
 backup_one_service() {
   local ctr="$1"
@@ -171,14 +171,14 @@ backup_one_service() {
   esac
   if [[ "$skip_db" == "true" && "$skip_files" == "true" ]]; then
     ((SKIPS+=1))
-    log_info "$SVC_NAME: SKIP — Quelle fehlt komplett"
+    log_info "$SVC_NAME: SKIP — source missing entirely"
     return 0
   fi
   if [[ "$skip_db" == "true" || "$skip_files" == "true" ]]; then
     PARTIALS=$((PARTIALS+1))
   fi
 
-  # Rotation VOR dem Schreiben
+  # Rotate BEFORE writing
   if [[ "$DRY_RUN" != "true" ]]; then
     case "$SVC_CATEGORY" in
       db_only)        rotate_versions "$BACKUP_ROOT/$SVC_NAME/db" ;;
@@ -195,7 +195,7 @@ backup_one_service() {
   case "$SVC_CATEGORY" in
     db_only|db_and_files)
       if [[ "$skip_db" == "true" ]]; then
-        log_warn "$SVC_NAME: DB-Backup uebersprungen — Teil-Backup"
+        log_warn "$SVC_NAME: DB backup skipped — partial backup"
       else
         if dump_database "$(svc_db_dir "$SVC_NAME")"; then
           ((STAT_DUMPS+=1))
@@ -206,23 +206,23 @@ backup_one_service() {
       ;;
   esac
 
-  # 2) Dateien (mit optionalem Stop-Fenster)
+  # 2) Files (with optional stop window)
   case "$SVC_CATEGORY" in
     files_only|db_and_files)
       if [[ "$skip_files" == "true" ]]; then
-        log_warn "$SVC_NAME: Datei-Backup uebersprungen — Teil-Backup"
+        log_warn "$SVC_NAME: file backup skipped — partial backup"
       else
         DEDUPED_ALL=false
         dedupe_paths
         if [[ ${#DEDUPED_PATHS[@]} -eq 0 ]]; then
           DEDUPED_ALL=true
-          log_info "$SVC_NAME: alle Datei-Pfade bereits in diesem Lauf gesichert — Datei-Backup uebersprungen"
+          log_info "$SVC_NAME: all file paths already backed up in this run — file backup skipped"
         else
           local do_stop=false
         if [[ ${#STOP_CONTAINERS[@]} -gt 0 ]]; then do_stop=true; fi
         if [[ "$do_stop" == "true" ]]; then
           if ! stop_containers "${STOP_CONTAINERS[@]}"; then
-            log_fail "$SVC_NAME: Stop-Fenster konnte nicht geoeffnet werden — ueberspringe Datei-Backup"
+            log_fail "$SVC_NAME: could not open stop window — skipping file backup"
             ((rc+=1))
           else
             if ! backup_files_for_service; then ((rc+=1)); fi
@@ -252,11 +252,11 @@ consistency_check_service() {
       if [[ "$skip_db" != "true" ]]; then
         dest="$BACKUP_ROOT/$SVC_NAME/db/v.0"
         if [[ ! -d "$dest" ]]; then
-          log_warn "Consistency: $SVC_NAME: kein DB-Stand in $dest"; problems=1
+          log_warn "Consistency: $SVC_NAME: no DB state in $dest"; problems=1
         else
           dump="$(find "$dest" -maxdepth 1 -type f -size +0c | head -1)"
           if [[ -z "$dump" ]]; then
-            log_warn "Consistency: $SVC_NAME: DB-Stand leer/0-Byte in $dest"; problems=1
+            log_warn "Consistency: $SVC_NAME: DB state empty/0-byte in $dest"; problems=1
           fi
         fi
       fi
@@ -267,9 +267,9 @@ consistency_check_service() {
       if [[ "$skip_files" != "true" && "${DEDUPED_ALL:-false}" != "true" ]]; then
         dest="$BACKUP_ROOT/$SVC_NAME/files/v.0"
         if [[ ! -d "$dest" ]]; then
-          log_warn "Consistency: $SVC_NAME: kein Datei-Stand in $dest"; problems=1
+          log_warn "Consistency: $SVC_NAME: no file state in $dest"; problems=1
         elif [[ -z "$(find "$dest" -type f -print -quit)" ]]; then
-          log_warn "Consistency: $SVC_NAME: Datei-Stand leer in $dest"; problems=1
+          log_warn "Consistency: $SVC_NAME: file state empty in $dest"; problems=1
         fi
       fi
       ;;
@@ -283,7 +283,7 @@ dedupe_paths() {
   for p in "${FILE_PATHS[@]:-}"; do
     [[ -z "$p" ]] && continue
     if [[ -n "${SEEN_PATHS[$p]:-}" ]]; then
-      log_info "$SVC_NAME: Pfad bereits in diesem Lauf gesichert (via ${SEEN_PATHS[$p]}), ueberspringe: $p"
+      log_info "$SVC_NAME: path already backed up in this run (via ${SEEN_PATHS[$p]}), skipping: $p"
       continue
     fi
     DEDUPED_PATHS+=("$p")
@@ -298,10 +298,10 @@ backup_files_for_service() {
   for p in "${DEDUPED_PATHS[@]:-}"; do
     [[ -z "$p" ]] && continue
     if [[ ! -e "$p" && "$DRY_RUN" != "true" ]]; then
-      log_warn "$SVC_NAME: Quelle fehlt, ueberspringe: $p"; ((rc+=1)); continue
+      log_warn "$SVC_NAME: source missing, skipping: $p"; ((rc+=1)); continue
     fi
     if [[ "$DRY_RUN" == "true" ]]; then
-      log_dry "$SVC_NAME: wuerde rsyncen: $p -> $dest/$(basename "$p") (excludes: ${FILE_EXCLUDES[*]:-none})"
+      log_dry "$SVC_NAME: would rsync: $p -> $dest/$(basename "$p") (excludes: ${FILE_EXCLUDES[*]:-none})"
     else
       local -a excludes=("${FILE_EXCLUDES[@]:-}")
       local src_arg="$p"
@@ -314,7 +314,7 @@ backup_files_for_service() {
         STAT_BYTES=$((STAT_BYTES + ${_fs[1]:-0}))
       else
         local rcode=$?
-        log_fail "$SVC_NAME: rsync fehlgeschlagen fuer $p (exit=$rcode) — Details siehe Log"
+        log_fail "$SVC_NAME: rsync failed for $p (exit=$rcode) — see log for details"
         ((rc+=1))
       fi
     fi
@@ -326,21 +326,21 @@ backup_files_for_service() {
 }
 
 # ----------------------------------------------------------------------
-# Hauptlauf
+# Main run
 # ----------------------------------------------------------------------
 for ctr in "${RUN_CONTAINERS[@]}"; do
   backup_one_service "$ctr"
 done
 
 if [[ "$DISCOVER" == "true" ]]; then
-  log_info "Discovery beendet: ${#RUN_CONTAINERS[@]} Container inventarisiert (kein Backup geschrieben)"
+  log_info "Discovery finished: ${#RUN_CONTAINERS[@]} containers inventoried (no backup written)"
   exit 0
 fi
 
-if [[ ${#WARTENDE_LUECKEN[@]} -gt 0 ]]; then
-  log_warn "Offene Luecken in diesem Lauf (${#WARTENDE_LUECKEN[@]}):"
+if [[ ${#OPEN_GAPS[@]} -gt 0 ]]; then
+  log_warn "Open gaps in this run (${#OPEN_GAPS[@]}):"
   local_l=""
-  for local_l in "${WARTENDE_LUECKEN[@]}"; do
+  for local_l in "${OPEN_GAPS[@]}"; do
     log_warn "  - $local_l"
   done
 fi
@@ -354,7 +354,7 @@ human_size() {
   fi
 }
 log_info "Summary: $OKS Services backed up, $STAT_DUMPS database dumps, $STAT_FILES Files ($(human_size $STAT_BYTES)), PARTIAL=$PARTIALS"
-log_info "Lauf beendet: OK=$OKS FAIL=$FAILS SKIP=$SKIPS PARTIAL=$PARTIALS"
+log_info "Run finished: OK=$OKS FAIL=$FAILS SKIP=$SKIPS PARTIAL=$PARTIALS"
 if [[ "$DRY_RUN" != "true" ]]; then
   printf 'OK=%s FAIL=%s SKIP=%s PARTIAL=%s DUMPS=%s FILES=%s BYTES=%s\n' \
     "$OKS" "$FAILS" "$SKIPS" "$PARTIALS" "$STAT_DUMPS" "$STAT_FILES" "$STAT_BYTES" \
@@ -363,9 +363,9 @@ fi
 
 if [[ "$DRY_RUN" != "true" ]]; then
   if [[ $FAILS -gt 0 ]]; then
-    log_warn "Gesamt-Check: $FAILS Service(s) mit Fehlern — Details siehe oben"
+    log_warn "Overall check: $FAILS service(s) with errors — see details above"
   else
-    log_ok "Gesamt-Check: alle geplanten Backups erfolgreich und konsistent"
+    log_ok "Overall check: all scheduled backups successful and consistent"
   fi
 fi
 

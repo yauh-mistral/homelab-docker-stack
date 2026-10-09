@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
-# common.sh — Logging, Locking, Pfad-Handling, Stop/Start-Fenster, Restic-Wrapper
-# Teil des Backup-Systems fuer den Docker-Host. Wird von backup.sh / restore.sh gesourced.
-# Keine Ausfuehrung standalone (kein shebang-Ausfuehrungspfad noetig, aber defensiv):
+# common.sh — Logging, locking, path handling, stop/start window, restic wrapper
+# Part of the backup system for the Docker host. Sourced by backup.sh / restore.sh.
+# Not meant to run standalone (no shebang execution path needed, but defensive):
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  echo "common.sh ist eine Bibliothek, nicht direkt ausfuehren." >&2
+  echo "common.sh is a library, do not execute directly." >&2
   exit 1
 fi
 
 set -o pipefail
 
-# --- Konfiguration (kann durch /etc/backup.conf ueberschrieben werden) ---
-# BACKUP_ROOT: Ziel (NAS)
-# STACKS_DIR:   Quelle der Compose-Stacks und deren .env-Dateien (z.B. /opt/docker/arcane/projects)
-#               Deklarationen koennen den Platzhalter %STACKS_DIR% nutzen.
-# --- Versionierung (Semantic Versioning) ---
-# Skript-Version des Backup-Systems. PATCH=Fixes, MINOR=Features,
-# MAJOR=Breaking Changes (Config/Deklarationsformat/CLI).
-# INSTALL_STAMP wird von install.sh mit Installationszeitpunkt versehen
-# (Format: "YYYY-MM-DD HH:MM"), damit Logs erkennen lassen, welcher Stand lief.
-# SCRIPT_BUILD ist die Nummer des GitHub-PRs, der den Stand geliefert hat —
-# beim Merge ergaenzt, damit Logs eindeutig dem Patch-Level (PR) zuordenbar sind.
+# --- Configuration (can be overridden via /etc/backup.conf) ---
+# BACKUP_ROOT: target (NAS)
+# STACKS_DIR:   source of the compose stacks and their .env files (e.g. /opt/docker/arcane/projects)
+#               Declarations may use the %STACKS_DIR% placeholder.
+# --- Versioning (semantic versioning) ---
+# Script version of the backup system. PATCH=fixes, MINOR=features,
+# MAJOR=breaking changes (config/declaration format/CLI).
+# INSTALL_STAMP is set by install.sh with the installation time
+# (format: "YYYY-MM-DD HH:MM") so logs reveal which state was running.
+# SCRIPT_BUILD is the number of the GitHub PR that delivered this state —
+# added on merge so logs map unambiguously to the patch level (PR).
 SCRIPT_VERSION="v1.0.0"
 SCRIPT_BUILD="66"
 INSTALL_STAMP="${INSTALL_STAMP:-not-installed}"
@@ -44,8 +44,8 @@ KEEP_DAILY_DUMPS="${KEEP_DAILY_DUMPS:-30}"
 KEEP_MONTHLY_DUMPS="${KEEP_MONTHLY_DUMPS:-12}"
 KEEP_DAILY_FILES="${KEEP_DAILY_FILES:-14}"
 KEEP_WEEKLY_FILES="${KEEP_WEEKLY_FILES:-8}"
-# rsnapshot-artige Rotation: Anzahl behaltener Versionen (v.0 .. v.N-1)
-# 0 = aktuelle Version, 1 = gestern usw. Konfigurierbar via /etc/backup.conf.
+# rsnapshot-style rotation: number of retained versions (v.0 .. v.N-1)
+# 0 = current version, 1 = yesterday, etc. Configurable via /etc/backup.conf.
 KEEP_VERSIONS="${KEEP_VERSIONS:-14}"
 
 LOG_FILE=""
@@ -62,7 +62,7 @@ log_init() {
   LOG_FILE="$dir/${_TIMESTAMP}.log"
   : > "$LOG_FILE"
   echo "=== Version ($(version_string)) ===" >> "$LOG_FILE"
-  echo "=== Backup-Lauf $_TIMESTAMP (host: $(hostname)) ===" >> "$LOG_FILE"
+  echo "=== Backup run $_TIMESTAMP (host: $(hostname)) ===" >> "$LOG_FILE"
 }
 
 _log() {
@@ -79,10 +79,10 @@ log_fail()  { _log FAIL  "$@"; }
 log_dry()   { _log DRY   "$@"; }
 log_warn()  { _log WARN  "$@"; }
 
-# Praefix fuer externen Tool-Output (rsync --stats, forgejo dump, etc.),
-# damit die Log-Datei einheitliche Timestamps behaelt. Aufruf in Pipes:
+# Prefix for external tool output (rsync --stats, forgejo dump, etc.)
+# so the log file keeps uniform timestamps. Use in pipes:
 #   tool ... 2>>"$LOG_FILE" | tee_ext "$SVC_NAME" >>"$LOG_FILE"
-# Ohne aktives Log (DRY_RUN) ist tee_ext ein reines >/dev/null.
+# Without an active log (DRY_RUN), tee_ext is a plain >/dev/null.
 tee_ext() {
   local svc="$1"
   if [[ -z "${LOG_FILE:-}" ]]; then
@@ -94,55 +94,55 @@ tee_ext() {
   done
 }
 
-# --- Locking gegen Parallel-Laefte ---
+# --- Locking against parallel runs ---
 _acquire_lock() {
   local lockfile="/tmp/backup-dispatcher.lock"
   if ! exec 9>"$lockfile"; then
-    log_fail "Kann Lockfile $lockfile nicht oeffnen"
+    log_fail "Cannot open lockfile $lockfile"
     exit 1
   fi
   if ! flock -n 9; then
-    log_fail "Ein anderer Backup-Lauf ist bereits aktiv ($lockfile)"
+    log_fail "Another backup run is already active ($lockfile)"
     exit 1
   fi
 }
 
-# --- Existenzpruefungen (fuer Dry-Run und echte Laeufe) ---
-# Preflight: Ist Docker ueberhaupt ansprechbar? Wenn nicht (z.B. Daemon down),
-# liefert jede container_exists-Pruefung false und alle Services waeren SKIP.
-# In dem Fall brechen wir lieber hart ab, statt stillschweigend nichts zu sichern.
+# --- Existence checks (for dry runs and real runs) ---
+# Preflight: is Docker reachable at all? If not (e.g. daemon down), every
+# container_exists check returns false and all services would be SKIP.
+# In that case we prefer a hard abort over silently backing up nothing.
 docker_available() {
   docker info >/dev/null 2>&1
 }
 
 container_exists() {
-  local name="${1:?Containername fehlt}"
+  local name="${1:?container name missing}"
   docker inspect "$name" >/dev/null 2>&1
 }
 
 container_running() {
-  local name="${1:?Containername fehlt}"
+  local name="${1:?container name missing}"
   [[ "$(docker inspect -f '{{.State.Running}}' "$name" 2>/dev/null)" == "true" ]]
 }
 
-# Prueft, ob das Backup-Ziel ein echter Mount ist (NAS darf nicht abgemountet sein,
-# sonst schreibt das Backup stillschweigend auf die lokale Platte).
-# FORCE_LOCAL=true umgeht den Check (fuer Tests auf Nicht-Produktions-Hosts).
+# Checks whether the backup target is a real mount (the NAS must not be unmounted,
+# otherwise the backup silently writes to the local disk).
+# FORCE_LOCAL=true bypasses the check (for tests on non-production hosts).
 require_mounted_target() {
-  local target="${1:?Zielpfad fehlt}"
+  local target="${1:?target path missing}"
   if [[ "${FORCE_LOCAL:-false}" == "true" ]]; then
-    log_warn "FORCE_LOCAL=true — Mount-Pruefung von $target uebersprungen (nur fuer Tests!)"
+    log_warn "FORCE_LOCAL=true — mount check for $target skipped (tests only!)"
     return 0
   fi
   if ! command -v findmnt >/dev/null 2>&1; then
-    log_warn "findmnt nicht verfuegbar — kann Mount-Status von $target nicht pruefen"
+    log_warn "findmnt not available — cannot check mount status of $target"
     return 0
   fi
   if [[ -d "$target" && "$(findmnt -nr -o TARGET --target "$target" 2>/dev/null)" == "$target" ]]; then
     return 0
   fi
-  # Ziel liegt auf einem Mount (z.B. /mnt oder darunter), aber exakt dieser Pfad
-  # ist kein Mountpoint — akzeptabel, wenn ein uebergeordneter Mount existiert
+  # The target is on a mount (e.g. under /mnt), but this exact path
+  # is not a mountpoint — acceptable if a parent mount exists
   local parent_mount
   parent_mount="$(findmnt -nr -o TARGET --target "$target" 2>/dev/null)" || true
   if [[ -n "$parent_mount" ]]; then
@@ -151,14 +151,14 @@ require_mounted_target() {
       *) : ;;
     esac
   fi
-  log_fail "$target ist kein NAS-Mount (findmnt findet keinen Mountpoint) — Backup abgebrochen."
-  log_fail "Wenn das Backup absichtlich auf lokale Platte laufen soll (TEST!): FORCE_LOCAL=true"
+  log_fail "$target is not a NAS mount (findmnt found no mountpoint) — backup aborted."
+  log_fail "If the backup should deliberately write to the local disk (TEST!): FORCE_LOCAL=true"
   return 1
 }
 
-# Wartet, bis ein Postgres-Container Verbindungen annimmt (nach z.B. Host-Reboot).
+# Waits until a Postgres container accepts connections (e.g. after a host reboot).
 wait_for_postgres() {
-  local container="${1:?Container fehlt}" user="${2:-postgres}" tries="${3:-30}"
+  local container="${1:?container missing}" user="${2:-postgres}" tries="${3:-30}"
   local i
   for ((i=1; i<=tries; i++)); do
     if docker exec "$container" pg_isready -U "$user" >/dev/null 2>&1; then
@@ -166,11 +166,11 @@ wait_for_postgres() {
     fi
     sleep 2
   done
-  log_fail "$SVC_NAME: Postgres in $container nach $tries Versuchen nicht bereit"
+  log_fail "$SVC_NAME: Postgres in $container not ready after $tries attempts"
   return 1
 }
 
-# --- Stop-Fenster ---
+# --- Stop window ---
 stop_containers() {
   local -a cts=("$@")
   STOPPED_CONTAINERS=()
@@ -178,24 +178,24 @@ stop_containers() {
   for c in "${cts[@]}"; do
     if container_running "$c"; then
       if [[ "$DRY_RUN" == "true" ]]; then
-        log_dry "$SVC_NAME: wuerde Container '$c' stoppen"
+        log_dry "$SVC_NAME: would stop container '$c'"
       else
         if docker stop "$c" >/dev/null 2>&1; then
           STOPPED_CONTAINERS+=("$c")
-          log_info "$SVC_NAME: Container '$c' gestoppt (Stop-Fenster)"
+          log_info "$SVC_NAME: container '$c' stopped (stop window)"
         else
-          log_fail "$SVC_NAME: Container '$c' konnte nicht gestoppt werden"
+          log_fail "$SVC_NAME: container '$c' could not be stopped"
           rc=1
         fi
       fi
     else
-      log_warn "$SVC_NAME: Container '$c' laeuft nicht (nichts zu stoppen)"
+      log_warn "$SVC_NAME: container '$c' is not running (nothing to stop)"
     fi
   done
-  # Bei Fehlern bereits gestoppte Container SOFORT wieder starten,
-  # damit kein Service versehentlich down bleibt.
+  # On errors, restart already stopped containers IMMEDIATELY
+  # so no service accidentally stays down.
   if [[ $rc -ne 0 && ${#STOPPED_CONTAINERS[@]} -gt 0 ]]; then
-    log_warn "$SVC_NAME: Stop-Fenster nur teilweise — starte bereits gestoppte Container zurueck"
+    log_warn "$SVC_NAME: stop window only partial — restarting already stopped containers"
     start_containers
   fi
   return $rc
@@ -206,27 +206,27 @@ start_containers() {
   for c in "${STOPPED_CONTAINERS[@]:-}"; do
     [[ -z "$c" ]] && continue
     if [[ "$DRY_RUN" == "true" ]]; then
-      log_dry "$SVC_NAME: wuerde Container '$c' starten"
+      log_dry "$SVC_NAME: would start container '$c'"
     else
       if docker start "$c" >/dev/null 2>&1; then
-        log_info "$SVC_NAME: Container '$c' wieder gestartet"
+        log_info "$SVC_NAME: container '$c' restarted"
       else
-        log_fail "$SVC_NAME: Container '$c' konnte nicht gestartet werden!"
+        log_fail "$SVC_NAME: container '$c' could not be started!"
       fi
     fi
   done
 }
 
-# --- Ziel-Pfade pro Service (rsnapshot-artige Rotation, KEINE Timestamps im Pfad) ---
-# Restore und Cron bleiben dadurch stabil: v.0 ist immer der aktuellste Stand.
+# --- Target paths per service (rsnapshot-style rotation, NO timestamps in paths) ---
+# Restore and cron stay stable: v.0 is always the latest state.
 svc_db_dir()     { echo "$BACKUP_ROOT/${1:?svc}/db/v.0"; }
 svc_files_dir()  { echo "$BACKUP_ROOT/${1:?svc}/files/v.0"; }
 
-# --- Rotation (rsnapshot-Stil): v.N -> v.N+1, aelteste faellt raus ---
+# --- Rotation (rsnapshot style): v.N -> v.N+1, oldest drops out ---
 rotate_versions() {
-  local base="${1:?Basisverzeichnis fehlt}" keep="${2:-$KEEP_VERSIONS}" i
+  local base="${1:?base directory missing}" keep="${2:-$KEEP_VERSIONS}" i
   if [[ "$DRY_RUN" == "true" ]]; then
-    log_dry "Rotation: wuerde Versionen in $base weiterschieben (v.0..v.$((keep-1)))"
+    log_dry "Rotation: would shift versions in $base (v.0..v.$((keep-1)))"
     return 0
   fi
   mkdir -p "$base"
@@ -237,11 +237,11 @@ rotate_versions() {
   return 0
 }
 
-# --- Retention (Dumps: KEEP_DAILY + Monatsfirste) ---
+# --- Retention (dumps: KEEP_DAILY + monthly firsts) ---
 prune_dump_dirs() {
   local base="$1" keep_days="$2" keep_monthly="$3"
   if [[ "$DRY_RUN" == "true" ]]; then
-    log_dry "Retention: wuerde Dump-Verzeichnisse in $base aelter als $keep_days Tage entfernen (Monatsfirste behalten: $keep_monthly Monate)"
+    log_dry "Retention: would remove dump directories in $base older than $keep_days days (keeping monthly firsts: $keep_monthly months)"
     return 0
   fi
   [[ -d "$base" ]] || return 0
@@ -250,9 +250,9 @@ prune_dump_dirs() {
   local -a to_delete=()
   while IFS= read -r d; do
     name="$(basename "$d")"
-    # Behalte Monatsfirste (YYYY-MM-01_HHMM)
+    # Keep monthly firsts (YYYY-MM-01_HHMM)
     if [[ "$name" =~ ^[0-9]{4}-[0-9]{2}-01_ ]]; then
-      # Monatsfirst: nur loeschen wenn aelter als keep_monthly Monate
+      # Monthly first: only delete if older than keep_monthly months
       if [[ "${name:0:10}" < "$month_first_limit" ]]; then to_delete+=("$d"); fi
       continue
     fi
@@ -263,12 +263,12 @@ prune_dump_dirs() {
   local x
   for x in "${to_delete[@]:-}"; do
     [[ -e "$x" ]] || continue
-    log_info "Retention: entferne $x"
+    log_info "Retention: removing $x"
     rm -rf "$x"
   done
 }
 
-# --- rsync-Wrapper mit Exclude-Liste aus Array ---
+# --- rsync wrapper with exclude list from array ---
 rsync_backup() {
   local src="$1" dest="$2"
   shift 2
@@ -277,24 +277,24 @@ rsync_backup() {
     [[ -z "$e" ]] && continue
     excludes+=(--exclude "$e")
   done
-  # Hardlink-Dedupe gegen Vortagesversion (rsnapshot-Prinzip): unveraenderte
-  # Dateien belegen keinen zusaetzlichen Platz, wenn das Dateisystem Hardlinks
-  # unterstuetzt (NFS meist ja; CIFS oft nicht — dann stiller Fallback ohne Link).
+  # Hardlink dedupe against the previous version (rsnapshot principle): unchanged
+  # files take no additional space if the filesystem supports hardlinks
+  # (NFS usually yes; CIFS often not — then a silent fallback without links).
   local link_dest="${dest/v.0/v.1}"
   if [[ -e "$link_dest" ]]; then
     excludes+=(--link-dest="$link_dest")
   fi
-  # NAS-Shares erlauben i.d.R. kein chown durch den Host (root_squash/CIFS) —
-  # ohne --no-owner/--no-group liefert rsync trotz vollstaendigem Transfer
-  # Exit-Code 23 (chown: Operation not permitted). Ownership kann auf dem
-  # Ziel ohnehin nicht gespeichert werden; Rechte/Zeiten bleiben erhalten.
+  # NAS shares usually do not allow chown by the host (root_squash/CIFS) —
+  # without --no-owner/--no-group rsync returns exit code 23 (chown: operation
+  # not permitted) despite a complete transfer. Ownership cannot be stored on
+  # the target anyway; permissions/times are preserved.
   local -a opts=(-a --no-owner --no-group --delete-excluded --numeric-ids --mkpath)
   if [[ "$DRY_RUN" == "true" ]]; then
     opts+=(-n --stats)
   else
     opts+=(--stats)
   fi
-  # rsync-Output (inkl. Fehlerdetails) praefixiert ins Log — Exit-Code bleibt erhalten
+  # rsync output (including error details) prefixed into the log — exit code preserved
   local errtmp=""
   [[ -n "${LOG_FILE:-}" ]] && errtmp="$(mktemp)"
   if [[ -n "$errtmp" ]]; then
@@ -308,7 +308,7 @@ rsync_backup() {
   return $?
 }
 
-# --- Restic-Wrapper (optional zugeschaltet) ---
+# --- Restic wrappers (optionally enabled) ---
 restic_repo() { echo "${RESTIC_ROOT}/${1:?svc}"; }
 
 restic_backup_paths() {
@@ -316,17 +316,17 @@ restic_backup_paths() {
   if [[ "$USE_RESTIC" != "true" ]]; then return 0; fi
   local repo; repo="$(restic_repo "$svc")"
   if [[ "$DRY_RUN" == "true" ]]; then
-    log_dry "$svc: wuerde restic backup nach $repo ausfuehren fuer: $*"
+    log_dry "$svc: would run restic backup to $repo for: $*"
     return 0
   fi
   if ! command -v restic >/dev/null 2>&1; then
-    log_warn "$svc: restic nicht installiert, ueberspringe Restic-Backup"
+    log_warn "$svc: restic not installed, skipping restic backup"
     return 0
   fi
   mkdir -p "$repo"
   if ! restic -r "$repo" --password-file "$RESTIC_PASSWORD_FILE" snapshots >/dev/null 2>&1; then
     restic -r "$repo" --password-file "$RESTIC_PASSWORD_FILE" init >/dev/null 2>&1 || {
-      log_fail "$svc: restic init fehlgeschlagen"; return 1; }
+      log_fail "$svc: restic init failed"; return 1; }
   fi
   local -a excludes=()
   local e
@@ -335,11 +335,11 @@ restic_backup_paths() {
     excludes+=(-e "$e")
   done
   restic -r "$repo" --password-file "$RESTIC_PASSWORD_FILE" backup "$@" "${excludes[@]}" \
-    >/dev/null 2>&1 || { log_fail "$svc: restic backup fehlgeschlagen"; return 1; }
+    >/dev/null 2>&1 || { log_fail "$svc: restic backup failed"; return 1; }
   restic -r "$repo" --password-file "$RESTIC_PASSWORD_FILE" forget \
     --keep-daily "$KEEP_DAILY_FILES" --keep-weekly "$KEEP_WEEKLY_FILES" \
     --keep-monthly "$KEEP_MONTHLY_DUMPS" --prune >/dev/null 2>&1 || \
-    log_warn "$svc: restic forget/prune fehlgeschlagen (Backup selbst ok)"
-  log_ok "$svc: restic backup aktualisiert"
+    log_warn "$svc: restic forget/prune failed (backup itself ok)"
+  log_ok "$svc: restic backup updated"
   return 0
 }
