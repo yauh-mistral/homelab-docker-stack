@@ -1,0 +1,99 @@
+services:
+  nginx-proxy:
+    container_name: ${COMPOSE_PROJECT_NAME}-nginx
+    image: nginxproxy/nginx-proxy
+    restart: unless-stopped
+    environment:
+      - TRUST_DOWNSTREAM_PROXY=${PROXY_TRUST_DOWNSTREAM}
+      - NGINX_PROXY_CONTAINER_MODIFICATION=${NGINX_MODIFICATION}
+    volumes:
+      - ${NGINX_BASE_PATH}/staticfiles:/static:ro
+      - ${NGINX_BASE_PATH}/mediafiles:/media:ro
+      - ${NGINX_BASE_PATH}/conf:/etc/nginx/conf.d
+      - ${NGINX_BASE_PATH}/vhost:/etc/nginx/vhost.d
+      - ${NGINX_BASE_PATH}/html:/usr/share/nginx/html
+      - ${NGINX_BASE_PATH}/certs:/etc/nginx/certs:ro
+      - ${NGINX_BASE_PATH}/htpasswd:/etc/nginx/htpasswd
+      - ${NGINX_BASE_PATH}/logs:/var/log/nginx
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - shared_proxy
+
+  acme-companion:
+    container_name: ${COMPOSE_PROJECT_NAME}-acme
+    image: nginxproxy/acme-companion
+    restart: unless-stopped
+    depends_on:
+      nginx-proxy:
+        condition: service_healthy
+    environment:
+      DEFAULT_EMAIL: ${ACME_DEFAULT_EMAIL}
+      NGINX_PROXY_CONTAINER: ${COMPOSE_PROJECT_NAME}-nginx
+      DEBUG: ${ACME_DEBUG}
+      DEDYN_TOKEN: ${DESEC_TOKEN}
+      ACME_CHALLENGE: ${ACME_CHALLENGE}
+      ACMESH_DNS_API_CONFIG: |-
+        DNS_API: dns_desec
+        DESEC_TOKEN: ${DESEC_TOKEN}
+    volumes:
+      - ${ACME_BASE_PATH}:/etc/acme.sh
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${NGINX_BASE_PATH}/conf:/etc/nginx/conf.d
+      - ${NGINX_BASE_PATH}/vhost:/etc/nginx/vhost.d
+      - ${NGINX_BASE_PATH}/html:/usr/share/nginx/html
+      - ${NGINX_BASE_PATH}/certs:/etc/nginx/certs:rw
+    healthcheck:
+      test: ["CMD-SHELL", "test -d /etc/acme.sh && pgrep -f docker-gen || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    networks:
+      - shared_proxy
+
+  # Wildcard-Zertifikat: ein Dummy-Container, alle Domain-Familien in einer
+  # Variable. Der VIRTUAL_HOST ist ein reiner Routing-Platzhalter (bewusst
+  # hardcoded, gehoert zur Compose-Struktur). Fuer mehrere getrennte
+  # Domain-Familien kann dieser Block dupliziert werden (eigener Container
+  # + eigene WILDCARD_DOMAINS-Variable je Familie).
+  cert-dummy:
+    container_name: cert-dummy
+    image: alpine
+    command: ["sh", "-c", "sleep infinity"]
+    restart: unless-stopped
+    depends_on:
+      acme-companion:
+        condition: service_started
+    environment:
+      - VIRTUAL_HOST=cert-dummy.local
+      - LETSENCRYPT_HOST=${WILDCARD_DOMAINS}
+      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
+    networks:
+      - shared_proxy
+
+  main-site:
+    container_name: main-site
+    image: nginx:alpine
+    restart: unless-stopped
+    environment:
+      - VIRTUAL_HOST=${MAIN_DOMAIN},${WWW_DOMAIN}
+      - LETSENCRYPT_HOST=${MAIN_DOMAIN},${WWW_DOMAIN}
+      - LETSENCRYPT_EMAIL=${ACME_DEFAULT_EMAIL}
+      - VIRTUAL_PORT=${MAIN_SITE_PORT}
+    volumes:
+      - /opt/docker/yauh:/usr/share/nginx/html:ro
+    networks:
+      - shared_proxy
+
+networks:
+  shared_proxy:
+    external: true

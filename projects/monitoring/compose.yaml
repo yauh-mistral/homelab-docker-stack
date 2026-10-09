@@ -1,0 +1,136 @@
+services:
+
+  dashdot:
+    container_name: ${COMPOSE_PROJECT_NAME}-dashdot
+    image: mauricenino/dashdot:latest
+    restart: unless-stopped
+    privileged: true # Required by Dashdot for host system stats
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - VIRTUAL_HOST=${DASHDOT_HOST}
+      - VIRTUAL_PORT=${DASHDOT_PORT}
+      - DASHDOT_ENABLE_CPU_TEMPS=${DASHDOT_ENABLE_CPU_TEMPS}
+    volumes:
+      - /proc/1/ns/net:/mnt/host_ns_net:ro
+      - /etc/os-release:/etc/os-release:ro
+      - /:/mnt/host:ro
+    networks:
+      - shared_proxy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  uptime-kuma:
+    container_name: ${COMPOSE_PROJECT_NAME}-kuma
+    image: louislam/uptime-kuma:2
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - VIRTUAL_HOST=${KUMA_HOST}
+      - VIRTUAL_PORT=${KUMA_PORT}
+    volumes:
+      - ${KUMA_BASE_PATH}:/app/data:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - shared_proxy
+
+  grafana:
+    container_name: ${COMPOSE_PROJECT_NAME}-grafana
+    image: grafana/grafana-enterprise:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    user: "472:472" # Replaced root (user: 0) with default Grafana unprivileged UID/GID
+    environment:
+      - TZ=${TZ}
+      - VIRTUAL_HOST=${GRAFANA_HOST}
+      - VIRTUAL_PORT=${GRAFANA_PORT}
+    volumes:
+      - ${GRAFANA_BASE_PATH}/data:/var/lib/grafana
+      - ${GRAFANA_BASE_PATH}/logs:/var/log/grafana
+    networks:
+      - shared_proxy
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  shynet-db:
+    container_name: analytics-db
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      # Database Credentials
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      # Bind mount for database data persistence
+      - ${DB_DATA_PATH}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - default_shynet # Internal network only
+  shynet-server:
+    container_name: analytics-shynet-server
+    # Use the official Shynet image
+    image: milesmcc/shynet:latest
+    restart: always
+    depends_on:
+      shynet-db:
+        condition: service_healthy # Wait for the database to be ready
+    environment:
+      # Standard Variables
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+
+      # Proxy Configuration for Nginx-Proxy
+      - VIRTUAL_HOST=${SHYNET_HOST}
+      - VIRTUAL_PORT=${SHYNET_PORT}
+      - DJANGO_SECURE_PROXY_SSL_HEADER=${SHYNET_DJANGO_SECURE_PROXY_SSL_HEADER}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}
+      #- LETSENCRYPT_CHALLENGE=dns
+      # Database Connection (using the internal Docker network name)
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@shynet-db:5432/${POSTGRES_DB}
+
+      # Security & Initialization Secrets
+      - SECRET_KEY=${SECRET_KEY}
+      - DB_SECRET_KEY=${DB_SECRET_KEY}
+
+      # Hostnames allowed by Django for security
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - SECURE_PROXY_SSL_HEADER=${SHYNET_SECURE_PROXY_SSL_HEADER}
+
+      # Email setup (Recommended for admin access/alerts)
+      - SERVER_EMAIL=Shynet <${SMTP_SENDER}>
+      - DEFAULT_FROM_EMAIL=${SMTP_SENDER}
+      - EMAIL_HOST=${SMTP_HOST}
+      - EMAIL_PORT=${SMTP_PORT}
+      - EMAIL_HOST_USER=${SMTP_USER}
+      - EMAIL_HOST_PASSWORD=${SMTP_PASSWORD}
+      - EMAIL_USE_SSL=${SHYNET_EMAIL_USE_SSL}
+
+
+    volumes:
+      # Persistent storage for static files and logs
+      - ${SHYNET_DATA_PATH}:/app/data
+      - /etc/localtime:/etc/localtime:ro
+
+    networks:
+
+      - shared_proxy   # External access via Nginx-Proxy
+      - default_shynet # Internal communication
+networks:
+  shared_proxy:
+    external: true

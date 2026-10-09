@@ -1,0 +1,88 @@
+x-common-env: &cenv
+  MEILI_URL: http://search:7700
+  MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+
+services:
+  search:
+    container_name: wanderer_search
+    image: getmeili/meilisearch:v1.11.3
+    restart: unless-stopped
+    environment:
+      <<: *cenv
+      MEILI_NO_ANALYTICS: "${MEILI_NO_ANALYTICS}"
+    volumes:
+      - /opt/docker/wanderer/search:/meili_data/data.ms
+    healthcheck:
+      test: curl --fail http://localhost:7700/health || exit 1
+      interval: 15s
+      retries: 10
+      start_period: 20s
+      timeout: 10s
+
+    networks:
+      - wanderer
+  db:
+    container_name: wanderer_db
+    image: flomp/wanderer-db
+    restart: unless-stopped
+    depends_on:
+      search:
+        condition: service_healthy
+    environment:
+      <<: *cenv
+      POCKETBASE_ENCRYPTION_KEY: ${POCKETBASE_ENCRYPTION_KEY}
+      POCKETBASE_PROXY_SECRET: ${POCKETBASE_PROXY_SECRET}
+      ORIGIN: ${ORIGIN}
+    volumes:
+      - /opt/docker/wanderer/db:/pb_data
+      - /opt/docker/wanderer/plugins:/data/plugins
+    healthcheck:
+      test: ["CMD", "/curl", "--fail", "http://localhost:8090/health"]
+      interval: 15s
+      retries: 10
+      start_period: 20s
+      timeout: 10s
+
+    networks:
+      - wanderer
+  web:
+    container_name: wanderer_web
+    image: flomp/wanderer-web
+    restart: unless-stopped
+    depends_on:
+      search:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    environment:
+      <<: *cenv
+      ORIGIN: ${ORIGIN}
+      BODY_SIZE_LIMIT: ${BODY_SIZE_LIMIT}
+      POCKETBASE_PROXY_SECRET: ${POCKETBASE_PROXY_SECRET}
+      PUBLIC_POCKETBASE_URL: http://db:8090
+      PUBLIC_DISABLE_SIGNUP: ${PUBLIC_DISABLE_SIGNUP}
+      UPLOAD_FOLDER: /app/uploads
+      OVERPASS_API_URL: ${OVERPASS_API_URL}
+      VALHALLA_URL: ${VALHALLA_URL}
+      NOMINATIM_URL: ${NOMINATIM_URL}
+      PUBLIC_MAP_MAX_POLYLINES: ${PUBLIC_MAP_MAX_POLYLINES}
+      VIRTUAL_HOST: ${WANDERER_DOMAIN},www.${WANDERER_DOMAIN}
+      VIRTUAL_PORT: ${WANDERER_PORT}
+    volumes:
+      - /opt/docker/wanderer/uploads:/app/uploads
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/"]
+      interval: 15s
+      retries: 10
+      start_period: 20s
+      timeout: 10s
+
+    networks:
+      - wanderer
+      - shared_proxy
+networks:
+  wanderer:
+  shared_proxy:
+    external: true
