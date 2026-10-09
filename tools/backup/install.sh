@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# install.sh — Installiert das Backup-System in seine eigene Heimat (Default /opt/docker/backup),
+# install.sh — Installiert das Backup-System in seine eigene Heimat (Default /opt/docker/tools/backup),
 # unabhaengig vom Repo. Quelle (Compose-Stacks + .env) und Ziel (NAS) werden in
 # /etc/backup.conf konfiguriert, nicht im Code.
 #
 # Usage:
-#   install.sh [--home /opt/docker/backup] [--stacks-dir /pfad/zu/projects] [--backup-root /mnt/systems/backups/ovi]
+#   install.sh [--home /opt/docker/tools/backup] [--stacks-dir /pfad/zu/projects] [--backup-root /mnt/systems/backups/ovi]
 #
 set -u
 set -o pipefail
@@ -16,7 +16,7 @@ LIB_VERSION="$(grep -m1 '^SCRIPT_VERSION=' "$SCRIPT_DIR/lib/common.sh" | cut -d=
 LIB_BUILD="$(grep -m1 '^SCRIPT_BUILD=' "$SCRIPT_DIR/lib/common.sh" | cut -d= -f2 | tr -d '"')"
 INSTALL_STAMP="$(date '+%Y-%m-%d %H:%M')"
 
-INSTALL_HOME="/opt/docker/backup"
+INSTALL_HOME="/opt/docker/tools/backup"
 STACKS_DIR="/opt/docker/arcane/projects"
 BACKUP_ROOT="/mnt/systems/ovi/backup"
 CONF_FILE="/etc/backup.conf"

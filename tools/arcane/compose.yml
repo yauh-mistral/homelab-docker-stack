@@ -1,0 +1,42 @@
+# compose.yml — Arcane-Bootstrap ( host-seitiges Compose, NICHT Teil von projects/)
+#
+# Arcane kann sich nicht selbst hosten (Bootstrap-Problem): Die Verwaltungs-
+# oberflaeche kann den Compose-Stack, der sie selbst startet, nicht verwalten.
+# Deshalb laeuft Arcane aus diesem host-seitigen Compose-File ausserhalb der
+# Arcane-verwalteten Projekte. Installationsort auf dem Host:
+#   /opt/docker/tools/arcane/compose.yml  (Compose-Projektname: base)
+#
+# Deploy/Update von Hand:
+#   cd /opt/docker/tools/arcane && docker compose pull && docker compose up -d
+#
+# Secrets: ENCRYPTION_KEY und JWT_SECRET sind Platzhalter — auf dem Host
+# echte Werte einsetzen (openssl rand -hex 32). Keine echten Werte im Repo.
+
+name: base
+
+services:
+  arcane:
+    container_name: arcane
+    image: ghcr.io/getarcaneapp/arcane:latest
+    restart: unless-stopped
+    ports:
+      - 3552:3552
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /opt/docker/arcane/data:/app/data
+      - /opt/docker/arcane/projects:/app/data/projects
+    environment:
+      - APP_URL=http://localhost:3552
+      - PUID=1000
+      - PGID=999
+      - ENCRYPTION_KEY=REPLACE_ME
+      - JWT_SECRET=REPLACE_ME
+      - VIRTUAL_HOST=arcane.islasorna.de
+      - LETSENCRYPT_HOST=arcane.islasorna.de
+      - VIRTUAL_PORT=3552
+    networks:
+      - shared_proxy
+
+networks:
+  shared_proxy:
+    external: true
