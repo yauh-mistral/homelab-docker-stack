@@ -95,16 +95,16 @@ USE_RESTIC=false
 ```bash
 sudo /opt/docker/tools/backup/backup.sh --dry-run
 ```
-Erwartung: pro Service `[DRY]`-Zeilen mit exakten `docker exec`/rsync-Befehlen, am Ende `OK=40 FAIL=0 SKIP=3`. `WARN` zu fehlenden Pfaden = Abweichung zwischen Deklaration und Host — prüfen oder als dokumentierte Lücke akzeptieren.
+Erwartung: pro Service `[DRY]`-Zeilen mit exakten `docker exec`/rsync-Befehlen, am Ende `OK / FAIL / SKIP / PARTIAL`-Summary (Zahlen host-abhängig — auf dem Referenz-Host z.B. `OK=39 FAIL=0 SKIP=7 PARTIAL=0`; SKIP = Dedupe und ignorierte Services). `WARN` zu fehlenden Pfaden heißt: Quelle prüfen.
 
 ## Schritt 6: Begrenzter erster echter Lauf
 
 ```bash
-sudo /opt/docker/tools/backup/backup.sh --service litellm
-sudo ls -la /mnt/systems/backups/<host>/litellm/db/*/
+sudo /opt/docker/tools/backup/backup.sh --service litellm_db
+sudo ls -la /mnt/systems/backups/<host>/litellm_db/db/*/
 ```
 
-`--service` erwartet den **Container-Namen** (z.B. `litellm`), nicht den Stack. Für einen ganzen Stack: `--project <stack>` (z.B. `--project local-ai`).
+`--service` erwartet den **Container-Namen** (z.B. `litellm_db`), nicht den Stack. Für einen ganzen Stack: `--project <stack>` (z.B. `--project local-ai`).
 
 ## Schritt 7: Voller Testrun
 
@@ -153,7 +153,7 @@ Ziel-Pfade enthalten **keine Timestamps** mehr. Jeder Service hat rotierende Ver
                                                   v.1 ... v.KEEP_VERSIONS-1
 ```
 
-- Vor jedem Backup schiebt der Dispatcher `v.0 -> v.1 -> ... -> v.N-1`, die älteste Version fällt weg.
+- Vor jedem Backup schiebt der Dispatcher pro Service `v.0 -> v.1 -> ... -> v.N-1`, die älteste Version (`rm -rf v.$((KEEP_VERSIONS-1))`) fällt weg.
 - `KEEP_VERSIONS` (Default: **14**) in `/etc/backup.conf` konfigurierbar — z.B. `KEEP_VERSIONS=30`.
 - rsync nutzt `--link-dest=v.1`: unveränderte Dateien sind Hardlinks zum Vortag — pro Version nur echte Änderungen, Speicherbedarf bleibt flach (NFS unterstützt Hardlinks; auf CIFS läuft es ohne Verlinkung, verbraucht dann mehr Platz).
 - Timestamps stehen nicht im Pfad, sondern im Log: jede stdout- und Log-Zeile beginnt mit `YYYY-MM-DD HH:MM:SS` — Dauer einzelner Schritte direkt ablesbar.
