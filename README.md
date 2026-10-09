@@ -42,6 +42,7 @@ Kernstück ist **Arcane** — die Verwaltungsoberfläche, unter der alle Stacks 
 
 ```mermaid
 flowchart LR
+
     subgraph ovi["Docker-Host ovi"]
         B["tools/arcane/compose.yml<br/>(Projekt 'base')"] -->|"startet (Bootstrap)"| A
         A["Arcane (Verwaltung)"] -->|"verwaltet als Projekte"| S["Compose-Stacks<br/>(projects/*)"]
