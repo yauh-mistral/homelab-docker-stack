@@ -21,7 +21,7 @@ Anleitung, um das Backup-System auf dem Ubuntu-Docker-Host in Betrieb zu nehmen 
 
 /opt/docker/compose/compose.yml  Arcane-Bootstrap (von Hand gepflegt, NICHT vom Installer — Secrets!)
 /etc/backup.conf               Konfiguration: Quelle, Ziel, Restic (chmod 600)
-/mnt/systems/backups/&lt;host&gt;/      ZIEL auf dem NAS (db/ + files/ + logs/)
+/mnt/systems/backups/<host>/      ZIEL auf dem NAS (db/ + files/ + logs/)
 ```
 
 Die Host-Tools liegen **bewusst nicht im Repo-Checkout** (`/opt/docker/arcane`): Der Installer kopiert **alle Tools** (Backup-System + Maintenance) nach `/opt/docker/tools` (konfigurierbar via `--home`). Repo-Updates überschreiben die Installation nicht; ein Re-Run von `install.sh` aktualisiert sie (Policies in `policies.d/`/`policy.conf` können individuell angepasst bleiben, `rsync` ohne `--delete`).
@@ -67,7 +67,7 @@ sudo git pull
 sudo tools/install.sh \
   --home /opt/docker/tools \
   --stacks-dir /opt/docker/arcane/projects \
-  --backup-root /mnt/systems/backups/&lt;host&gt;
+  --backup-root /mnt/systems/backups/<host>
 ```
 
 Der Installer:
@@ -85,7 +85,7 @@ sudo cat /etc/backup.conf
 Minimalinhalt:
 ```bash
 STACKS_DIR=/opt/docker/arcane/projects      # Quelle: Compose + .env
-BACKUP_ROOT=/mnt/systems/backups/&lt;host&gt;    # Ziel: NAS (pro Host ein Unterverzeichnis)
+BACKUP_ROOT=/mnt/systems/backups/<host>    # Ziel: NAS (pro Host ein Unterverzeichnis)
 POLICY_DIR=/opt/docker/tools/backup/policies.d  # Heimat der Policy-Overlays
 USE_RESTIC=false
 ```
@@ -101,14 +101,16 @@ Erwartung: pro Service `[DRY]`-Zeilen mit exakten `docker exec`/rsync-Befehlen, 
 
 ```bash
 sudo /opt/docker/tools/backup/backup.sh --service litellm
-sudo ls -la /mnt/systems/backups/&lt;host&gt;/litellm/db/*/
+sudo ls -la /mnt/systems/backups/<host>/litellm/db/*/
 ```
+
+`--service` erwartet den **Container-Namen** (z.B. `litellm`), nicht den Stack. Für einen ganzen Stack: `--project <stack>` (z.B. `--project local-ai`).
 
 ## Schritt 7: Voller Testrun
 
 ```bash
 sudo /opt/docker/tools/backup/backup.sh
-sudo grep FAIL /mnt/systems/backups/&lt;host&gt;/logs/<neuester-stamp>.log
+sudo grep FAIL /mnt/systems/backups/<host>/logs/<neuester-stamp>.log
 ```
 Einzelfehler isolieren andere Services nicht (Fehler-Isolation pro Deklaration). Stop-Fenster-Services (arr-Stack, Home Assistant, Mealie, Kuma …) sind kurz down — nachts cron-fähig.
 
@@ -147,7 +149,7 @@ Die Maintenance-Zeile (monatlich, 1. des Monats 04:30) prunt bewusst auch Volume
 Ziel-Pfade enthalten **keine Timestamps** mehr. Jeder Service hat rotierende Versionen:
 
 ```text
-/mnt/systems/&lt;host&gt;/backups/&lt;service&gt;/db/v.0     <- aktuellster Stand
+/mnt/systems/<host>/backups/<service>/db/v.0     <- aktuellster Stand
                                                   v.1 ... v.KEEP_VERSIONS-1
 ```
 
@@ -169,9 +171,9 @@ sudo sh -c 'openssl rand -base64 32 > /etc/restic-password && chmod 600 /etc/res
 
 ## Monitoring & Betrieb
 
-- Letzter Lauf: `cat /mnt/systems/backups/&lt;host&gt;/logs/last-run-summary.txt`
-- Logs: `ls -t /mnt/systems/backups/&lt;host&gt;/logs/ | head -1`
-- Service nachziehen: `sudo /opt/docker/tools/backup/backup.sh --service <name>`
+- Letzter Lauf: `cat /mnt/systems/backups/<host>/logs/last-run-summary.txt`
+- Logs: `ls -t /mnt/systems/backups/<host>/logs/ | head -1`
+- Service nachziehen: `sudo /opt/docker/tools/backup/backup.sh --service <container-name>` (ganzer Stack: `--project <stack>`)
 - Restore: `docs/RESTORE.md`, zuerst `--dry-run`
 
 ## Updates des Backup-Systems
@@ -179,7 +181,7 @@ sudo sh -c 'openssl rand -base64 32 > /etc/restic-password && chmod 600 /etc/res
 Repo-Änderungen (neue Deklarationen, Fixes) einspielen:
 ```bash
 cd /opt/docker/arcane && sudo git pull
-sudo tools/install.sh --stacks-dir /opt/docker/arcane/projects --backup-root /mnt/systems/backups/&lt;host&gt;
+sudo tools/install.sh --stacks-dir /opt/docker/arcane/projects --backup-root /mnt/systems/backups/<host>
 ```
 `install.sh` aktualisiert die Installation (rsync ohne `--delete`: lokal angepasste Deklarationen bleiben erhalten).
 

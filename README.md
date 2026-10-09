@@ -50,13 +50,13 @@ flowchart TB
         A["Arcane (Verwaltung)<br/>Bootstrap: bootstrap/compose.yml"]
         A --> S["Compose-Stacks (projects/*)"]
         S --> STK["Stack / Service"]
-        STK --> BD[("Bind-Mounts *<br/>/opt/docker/&lt;stack&gt;/<br/>Configs + DB-Daten")]
+        STK --> BD[("Bind-Mounts *<br/>/opt/docker/<stack>/<br/>Configs + DB-Daten")]
         STK --> DB[("Datenbanken *<br/>als DB-Dump<br/>(Postgres, MySQL/MariaDB, SQLite)")]
         STK -.-> MF[("Media-Files<br/>NFS-Mounts /mnt/...<br/>NAS-eigenes Backup")]
     end
 
     subgraph nas["NAS (extern, NFS)"]
-        NAS[("NAS-Speicher<br/>Media-Mounts + Backup-Ziel<br/>/mnt/systems/&lt;host&gt;/backups")]
+        NAS[("NAS-Speicher<br/>Media-Mounts + Backup-Ziel<br/>/mnt/systems/<host>/backups")]
     end
 
     BD -->|"rsync (Rotation v.0..v.13)"| NAS
@@ -84,7 +84,7 @@ Details: [`docs/BACKUP-STRATEGIE.md`](docs/BACKUP-STRATEGIE.md) · [`docs/RESTOR
 cd /opt/docker/arcane && sudo git pull
 sudo tools/install.sh --home /opt/docker/tools \
      --stacks-dir /opt/docker/arcane/projects \
-     --backup-root /mnt/systems/&lt;host&gt;/backups
+     --backup-root /mnt/systems/<host>/backups
 
 # Testen
 sudo /opt/docker/tools/backup/backup.sh --dry-run       # nichts schreiben, nur planen

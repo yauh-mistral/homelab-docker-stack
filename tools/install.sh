@@ -146,6 +146,6 @@ echo
 echo "== Installation abgeschlossen =="
 echo "Naechste Schritte:"
 echo "  1. Trockenlauf:  sudo $INSTALL_HOME/backup.sh --dry-run"
-echo "  2. Erstlauf:     sudo $INSTALL_HOME/backup.sh --service litellm"
+echo "  2. Erstlauf:     sudo $INSTALL_HOME/backup.sh --service <container-name>"
 echo "  3. Voller Lauf:  sudo $INSTALL_HOME/backup.sh"
 echo "  Cron-Zeiten:     siehe $TOOLS_HOME/docs/DEPLOYMENT.md"
