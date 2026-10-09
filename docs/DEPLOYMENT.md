@@ -17,36 +17,49 @@ Anleitung, um das Backup-System auf dem Ubuntu-Docker-Host in Betrieb zu nehmen 
 │   ├── lib/                       common.sh, db.sh
 │   ├── policies.d/*.env           Policy-Overlays (installierte Kopie)
 │   └── docs/                      Referenz-Dokumentation
-├── arcane/                    Bootstrap-Compose für Arcane selbst (compose.yml, Projekt 'base')
 └── maintenance/               docker-maintenance.sh (prune, inkl. Volumes)
 
+/opt/docker/compose/compose.yml  Arcane-Bootstrap (von Hand gepflegt, NICHT vom Installer — Secrets!)
 /etc/backup.conf               Konfiguration: Quelle, Ziel, Restic (chmod 600)
 /mnt/systems/backups/&lt;host&gt;/      ZIEL auf dem NAS (db/ + files/ + logs/)
 ```
 
-Das Backup-System liegt **bewusst nicht im Repo-Checkout** (`/opt/docker/arcane`): Der Installer kopiert es nach `/opt/docker/tools/backup` (konfigurierbar via `--home`). Repo-Updates überschreiben die Installation nicht; ein Re-Run von `install.sh` aktualisiert sie (Policies in `policies.d/`/`policy.conf` können individuell angepasst bleiben, `rsync` ohne `--delete`).
+Die Host-Tools liegen **bewusst nicht im Repo-Checkout** (`/opt/docker/arcane`): Der Installer kopiert **alle Tools** (Backup-System + Maintenance) nach `/opt/docker/tools` (konfigurierbar via `--home`). Repo-Updates überschreiben die Installation nicht; ein Re-Run von `install.sh` aktualisiert sie (Policies in `policies.d/`/`policy.conf` können individuell angepasst bleiben, `rsync` ohne `--delete`).
 
 **Woher kommen Quelle und Ziel?** Ausdrücklich aus `/etc/backup.conf`:
 - `STACKS_DIR` — wo Compose-Stacks und deren `.env` leben (z.B. `/opt/docker/arcane/projects`). Deklarationen nutzen den Platzhalter `%STACKS_DIR%` (z.B. `ENV_FILE=%STACKS_DIR%/ghost/.env`), der Dispatcher löst ihn auf. So bleibt die Deklaration host-agnostisch.
 - `BACKUP_ROOT` — Ziel auf dem NAS (`/mnt/systems/backups/<host>`).
 - `POLICY_DIR` — Policy-Heimat (bei Installation `/opt/docker/tools/backup/policies.d`).
 
-## Schritt 0: Voraussetzungen
+## Schritt 1: Voraussetzungen
 
 - Ubuntu-Host mit root-Zugriff, Docker läuft
 - Repo-Checkout unter `/opt/docker/arcane` (aktuell: `sudo git pull`)
 - NAS-Mount `/mnt/systems` eingebunden: `findmnt /mnt/systems`
 
-**Arcane läuft nicht aus dem Repo-Projektverzeichnis.** Arcane kann sich nicht selbst hosten (Bootstrap-Problem: Die Verwaltungsoberfläche kann den Compose-Stack, der sie selbst startet, nicht verwalten). Der Arcane-Container läuft daher aus einem host-seitigen Compose-File: `/opt/docker/tools/arcane/compose.yml` (Repo-Vorlage: `tools/arcane/compose.yml`; Compose-Projektname `base`, Image `ghcr.io/getarcaneapp/arcane:latest`, Mounts auf `/opt/docker/arcane/data` und `/opt/docker/arcane/projects`). Start/Update von Hand:
+## Schritt 2: Arcane-Bootstrap (einmalig, von Hand)
+
+**Arcane läuft nicht aus dem Repo-Projektverzeichnis.** Arcane kann sich nicht selbst hosten (Bootstrap-Problem: Die Verwaltungsoberfläche kann den Compose-Stack, der sie selbst startet, nicht verwalten). Der Arcane-Container läuft daher aus einem host-seitigen Compose-File: `/opt/docker/compose/compose.yml` (Repo-Vorlage: `bootstrap/compose.yml`; Compose-Projektname `base`, Image `ghcr.io/getarcaneapp/arcane:latest`, Mounts auf `/opt/docker/arcane/data` und `/opt/docker/arcane/projects`).
+
+**Wichtig:** Diese Compose-Datei wird vom Installer **bewusst nicht angefasst** — sie enthält Secrets (`ENCRYPTION_KEY`, `JWT_SECRET`), die nicht überschrieben werden dürfen. Einmalig von Hand einrichten:
 
 ```bash
-cd /opt/docker/tools/arcane
+sudo mkdir -p /opt/docker/compose
+sudo cp bootstrap/compose.yml /opt/docker/compose/compose.yml
+sudo vi /opt/docker/compose/compose.yml   # REPLACE_ME-Werte ersetzen: openssl rand -hex 32
+cd /opt/docker/compose && docker compose up -d
+```
+
+Update später:
+
+```bash
+cd /opt/docker/compose
 docker compose pull && docker compose up -d   # Arcane (base-Projekt) aktualisieren
 ```
 
 Alle **anderen** Stacks werden als Projekte von Arcane verwaltet (`/opt/docker/arcane/projects`).
 
-## Schritt 1: Installation
+## Schritt 3: Installation
 
 ```bash
 cd /opt/docker/arcane
@@ -63,7 +76,7 @@ Der Installer:
 
 Alternativ ohne Parameter — der Installer fragt interaktiv nach dem Quellpfad.
 
-## Schritt 2: Konfiguration prüfen
+## Schritt 4: Konfiguration prüfen
 
 ```bash
 sudo cat /etc/backup.conf
@@ -76,21 +89,21 @@ POLICY_DIR=/opt/docker/tools/backup/policies.d  # Heimat der Policy-Overlays
 USE_RESTIC=false
 ```
 
-## Schritt 3: Trockenlauf (verändert nichts) (verändert nichts)
+## Schritt 5: Trockenlauf (verändert nichts)
 
 ```bash
 sudo /opt/docker/tools/backup/backup.sh --dry-run
 ```
 Erwartung: pro Service `[DRY]`-Zeilen mit exakten `docker exec`/rsync-Befehlen, am Ende `OK=40 FAIL=0 SKIP=3`. `WARN` zu fehlenden Pfaden = Abweichung zwischen Deklaration und Host — prüfen oder als dokumentierte Lücke akzeptieren.
 
-## Schritt 5: Begrenzter erster echter Lauf
+## Schritt 6: Begrenzter erster echter Lauf
 
 ```bash
 sudo /opt/docker/tools/backup/backup.sh --service litellm
 sudo ls -la /mnt/systems/backups/&lt;host&gt;/litellm/db/*/
 ```
 
-## Schritt 6: Voller Testrun
+## Schritt 7: Voller Testrun
 
 ```bash
 sudo /opt/docker/tools/backup/backup.sh
@@ -108,14 +121,14 @@ Einzelfehler isolieren andere Services nicht (Fehler-Isolation pro Deklaration).
 
 `SKIP` bedeutet damit zweierlei: per Deklaration `ignore` ODER „Quelle auf diesem Host nicht vorhanden“. Die Lücken-Liste am Ende des Laufs (`WARN - DB-Container fehlt: …`) zeigt genau, welche Services nicht deployt sind — Auslieferung ohne FAIL-Alarm möglich.
 
-## Schritt 7: Restore-Test
+## Schritt 8: Restore-Test
 
 ```bash
 sudo /opt/docker/tools/backup/test-restore.sh          # default: litellm
 sudo /opt/docker/tools/backup/test-restore.sh --all   # alle Postgres-Services
 ```
 
-## Schritt 8: Cron-Aktivierung
+## Schritt 9: Cron-Aktivierung
 
 ```bash
 sudo crontab -e
@@ -145,7 +158,7 @@ Ziel-Pfade enthalten **keine Timestamps** mehr. Jeder Service hat rotierende Ver
 - Am Laufende prüft der **Consistency-Check** alle Ziel-Stände: existiert `v.0`, ist er nicht leer, enthalten DB-Stände mind. einen Dump > 0 Bytes. Probleme erscheinen als `WARN` im Log.
 - Alte timestamp-basierte Stände (vor dieser Umstellung) bleiben über den `latest_dir`-Fallback im Restore lesbar.
 
-## Schritt 9: Restic (optional)
+## Schritt 10: Restic (optional)
 
 ```bash
 sudo apt-get install -y restic

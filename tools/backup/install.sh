@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# install.sh — Installiert das Backup-System in seine eigene Heimat (Default /opt/docker/tools/backup),
+# install.sh — Installiert alle Host-Tools (backup + maintenance) nach /opt/docker/tools,
 # unabhaengig vom Repo. Quelle (Compose-Stacks + .env) und Ziel (NAS) werden in
 # /etc/backup.conf konfiguriert, nicht im Code.
+# Bootstrap (bootstrap/compose.yml fuer Arcane) wird BEWUSST NICHT installiert:
+# Die Compose enthaelt Secrets und wird von Hand gepflegt (siehe docs/DEPLOYMENT.md).
 #
 # Usage:
 #   install.sh [--home /opt/docker/tools/backup] [--stacks-dir /pfad/zu/projects] [--backup-root /mnt/systems/backups/<host>]
@@ -16,14 +18,16 @@ LIB_VERSION="$(grep -m1 '^SCRIPT_VERSION=' "$SCRIPT_DIR/lib/common.sh" | cut -d=
 LIB_BUILD="$(grep -m1 '^SCRIPT_BUILD=' "$SCRIPT_DIR/lib/common.sh" | cut -d= -f2 | tr -d '"')"
 INSTALL_STAMP="$(date '+%Y-%m-%d %H:%M')"
 
-INSTALL_HOME="/opt/docker/tools/backup"
+TOOLS_HOME="/opt/docker/tools"
+INSTALL_HOME="$TOOLS_HOME/backup"
+MAINT_HOME="$TOOLS_HOME/maintenance"
 STACKS_DIR="/opt/docker/arcane/projects"
 BACKUP_ROOT="/mnt/systems/$(hostname)/backups"
 CONF_FILE="/etc/backup.conf"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --home)        shift; INSTALL_HOME="${1:?--home braucht Pfad}" ;;
+    --home)        shift; TOOLS_HOME="${1:?--home braucht Pfad}"; INSTALL_HOME="$TOOLS_HOME/backup"; MAINT_HOME="$TOOLS_HOME/maintenance" ;;
     --stacks-dir)  shift; STACKS_DIR="${1:?--stacks-dir braucht Pfad}" ;;
     --backup-root) shift; BACKUP_ROOT="${1:?--backup-root braucht Pfad}" ;;
     -h|--help)     sed -n '2,9p' "$0"; exit 0 ;;
@@ -33,7 +37,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "== Backup-System-Installation =="
-echo "Heimat:      $INSTALL_HOME"
+echo "Heimat:      $TOOLS_HOME (backup + maintenance)"
 echo "Quelle:      ${STACKS_DIR:-<nachfragen>}"
 echo "Ziel (NAS):  $BACKUP_ROOT"
 echo "Konfig:      $CONF_FILE"
@@ -48,7 +52,7 @@ fi
   || echo "WARNUNG: $STACKS_DIR sieht nicht nach dem projects/-Verzeichnis aus (kein ghost-Stack gefunden) — trotzdem fortgesetzt."
 
 # --- Heimat anlegen ---
-mkdir -p "$INSTALL_HOME" || { echo "FEHLER: Kann $INSTALL_HOME nicht anlegen" >&2; exit 1; }
+mkdir -p "$INSTALL_HOME" "$MAINT_HOME" || { echo "FEHLER: Kann $TOOLS_HOME nicht anlegen" >&2; exit 1; }
 
 # --- Dateien kopieren (idempotent; rsync wenn verfuegbar, sonst cp-Fallback) ---
 copy_file() {
@@ -82,6 +86,15 @@ copy_tree "$SCRIPT_DIR/lib" "$INSTALL_HOME/lib"
 copy_tree "$SCRIPT_DIR/policies.d" "$INSTALL_HOME/policies.d" true
 copy_file "$SCRIPT_DIR/policy.conf" "$INSTALL_HOME/"
 chmod +x "$INSTALL_HOME"/*.sh
+
+# --- Maintenance-Tool mitinstallieren (gleiche Tools-Heimat, kein Bootstrap!) ---
+if [[ -d "$SCRIPT_DIR/../maintenance" ]]; then
+  copy_tree "$SCRIPT_DIR/../maintenance" "$MAINT_HOME" true
+  chmod +x "$MAINT_HOME"/*.sh
+  echo "Kopiert: maintenance -> $MAINT_HOME"
+else
+  echo "WARNUNG: ../maintenance nicht gefunden — Maintenance-Tool uebersprungen." >&2
+fi
 
 # Installationszeitpunkt und Build (PR-Nummer) in die installierte Kopie von
 # lib/common.sh schreiben, damit jedes Backup-/Restore-Log Version + Patch-Level +
@@ -123,10 +136,10 @@ EOF
   echo "Erzeugt: $CONF_FILE"
 fi
 
-# --- Docs mitgeben (Referenz auf dem Host) ---
+# --- Docs mitgeben (Referenz auf dem Host, gilt fuer alle Tools) ---
 if [[ -d "$SCRIPT_DIR/../docs" ]]; then
-  copy_tree "$SCRIPT_DIR/../docs" "$INSTALL_HOME/docs"
-  echo "Kopiert: docs/ -> $INSTALL_HOME/docs/"
+  copy_tree "$SCRIPT_DIR/../docs" "$TOOLS_HOME/docs"
+  echo "Kopiert: docs/ -> $TOOLS_HOME/docs/"
 fi
 
 echo
@@ -135,4 +148,4 @@ echo "Naechste Schritte:"
 echo "  1. Trockenlauf:  sudo $INSTALL_HOME/backup.sh --dry-run"
 echo "  2. Erstlauf:     sudo $INSTALL_HOME/backup.sh --service litellm"
 echo "  3. Voller Lauf:  sudo $INSTALL_HOME/backup.sh"
-echo "  Cron-Zeiten:     siehe $INSTALL_HOME/docs/DEPLOYMENT.md"
+echo "  Cron-Zeiten:     siehe $TOOLS_HOME/docs/DEPLOYMENT.md"
