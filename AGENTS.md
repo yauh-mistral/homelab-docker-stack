@@ -32,8 +32,8 @@
 
 ## Versionierung
 
-- **Phase 1 (aktuell): Einfrieren bei v1.0.0 + Build-Nummer.** Bis der erste vollständige Ende-zu-Ende-Test erfolgreich durchgelaufen ist (Discovery → Dry-Run → echter Lauf → `test-restore.sh --all` alles grün), bleibt `SCRIPT_VERSION` bei v1.0.0. Der Patch-Level wird über `SCRIPT_BUILD` (PR-Nummer) erkannt: Log zeigt `v1.0.0+#<PR> <stamp>`.
-- **Phase 2 (nach E2E-Erfolg): Semantic Versioning Mode.** Sobald der E2E-Test komplett grün ist, wird auf SemVer umgestellt: MAJOR = Breaking (Config/Deklarationsformat/CLI), MINOR = Feature, PATCH = Fix. Der Übergang selbst ist ein User-Entscheid, nicht automatisch.
+- **Release v1.0.0 (stabil, E2E verifiziert).** Der erste vollständige Ende-zu-Ende-Test ist erfolgreich durchlaufen (Discovery → Dry-Run → echter Lauf → Restore-Test aller DB-Services, Postgres + MariaDB). `SCRIPT_VERSION="v1.0.0"` in `tools/backup/lib/common.sh` ist der stabile Release-Stand, auf GitHub als Tag `v1.0.0` markiert.
+- **Semantic Versioning Mode (aktiv).** Ab v1.0.0 gilt SemVer: MAJOR = Breaking (Config/Deklarationsformat/CLI), MINOR = Feature, PATCH = Fix. Jede inhaltliche Änderung hebt `SCRIPT_VERSION` entsprechend an; `SCRIPT_BUILD` (PR-Nummer) läuft als Patch-Level-Kennung weiter daneben.
 - **`SCRIPT_BUILD`** (PR-Nummer) wird von der GitHub Action `.github/workflows/build-number.yml` nach jedem Merge automatisch nachgetragen (liest `(#N)` aus dem Merge-Commit-Subject). Manuelle Pflege entfällt.
 - `SCRIPT_VERSION` gilt **nur** für `tools/backup/` (`backup.sh`, `restore.sh`, `test-restore.sh`; der Installer liegt als `tools/install.sh` eine Ebene höher) — Hilfsskripte wie `tools/maintenance/docker-maintenance.sh` bekommen **keine** Versionsnummer.
 - `install.sh` stempelt die installierte Kopie mit Installationszeitpunkt (`INSTALL_STAMP`, `YYYY-MM-DD HH:MM`) und `SCRIPT_BUILD`. Jedes Log beginnt mit der Versionszeile (`vX.Y.Z+#<PR> <stamp>`) — veraltete Stände sofort erkennbar.
