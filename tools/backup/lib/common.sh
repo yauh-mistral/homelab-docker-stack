@@ -21,7 +21,7 @@ set -o pipefail
 # SCRIPT_BUILD ist die Nummer des GitHub-PRs, der den Stand geliefert hat —
 # beim Merge ergaenzt, damit Logs eindeutig dem Patch-Level (PR) zuordenbar sind.
 SCRIPT_VERSION="v1.0.0"
-SCRIPT_BUILD="58"
+SCRIPT_BUILD="59"
 INSTALL_STAMP="${INSTALL_STAMP:-not-installed}"
 version_string() {
   local v="$SCRIPT_VERSION"
