@@ -81,7 +81,7 @@ USE_RESTIC=false
 ```bash
 sudo /opt/docker/tools/backup/backup.sh --dry-run
 ```
-Erwartung: pro Service `[DRY]`-Zeilen mit exakten `docker exec`/rsync-Befehlen, am Ende `OK=40 FAIL=0 SKIP=3`. `WARN` zu fehlenden Pfaden = Abweichung zwischen Deklaration und Host — prüfen oder als dokumentierte Lücke akzeptieren (`docs/TODOS.md`).
+Erwartung: pro Service `[DRY]`-Zeilen mit exakten `docker exec`/rsync-Befehlen, am Ende `OK=40 FAIL=0 SKIP=3`. `WARN` zu fehlenden Pfaden = Abweichung zwischen Deklaration und Host — prüfen oder als dokumentierte Lücke akzeptieren.
 
 ## Schritt 5: Begrenzter erster echter Lauf
 
@@ -122,11 +122,11 @@ sudo crontab -e
 ```
 ```cron
 30 2 * * * /usr/bin/flock -n /tmp/backup-dispatcher.lock /opt/docker/tools/backup/backup.sh >> /var/log/backup-dispatcher.log 2>&1
-30 4 * * 0 /opt/docker/tools/maintenance/docker-maintenance.sh >> /var/log/docker-maintenance.log 2>&1
+30 4 1 * * /opt/docker/tools/maintenance/docker-maintenance.sh >> /var/log/docker-maintenance.log 2>&1
 ```
 
-Die Maintenance-Zeile (sonntags 04:30) prunt bewusst auch Volumes (`--volumes`-Verhalten ist Default; `--no-volumes` zum Deaktivieren). Sie läuft nie parallel zu Backups — das Skript bricht selbst ab, wenn ein Backup-/Restore-Prozess läuft (Stop-Fenster-Container wären sonst Verlustkandidaten).
-`flock` ist im Dispatcher eingebaut (parallele Läufe blockiert). Nach dem Testrun Cron-Zeiten gegen die tatsächliche Laufzeit prüfen (große rsync-Ziele wie `/mnt/immich` — ggf. Immich-Dateianteil wöchentlich, TODOS.md #13).
+Die Maintenance-Zeile (monatlich, 1. des Monats 04:30) prunt bewusst auch Volumes (`--volumes`-Verhalten ist Default; `--no-volumes` zum Deaktivieren). Sie läuft nie parallel zu Backups — das Skript bricht selbst ab, wenn ein Backup-/Restore-Prozess läuft (Stop-Fenster-Container wären sonst Verlustkandidaten).
+`flock` ist im Dispatcher eingebaut (parallele Läufe blockiert). Nach dem Testrun Cron-Zeiten gegen die tatsächliche Laufzeit prüfen (große rsync-Ziele wie `/mnt/immich` — ggf. Immich-Dateianteil wöchentlich).
 
 ## Versionierung & Retention (rsnapshot-Stil)
 
