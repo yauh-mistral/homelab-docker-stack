@@ -75,6 +75,7 @@ fi
 # --- Wegwerf-Container nur fuer die DB-Typen starten, die tatsaechlich getestet werden ---
 NEED_PG=false NEED_MY=false
 for svc in "${!TARGETS[@]}"; do
+  load_service_env "${TARGETS[$svc]}"
   case "${DB_TYPE:-}" in
     postgres)        NEED_PG=true ;;
     mysql|mariadb)   NEED_MY=true ;;
