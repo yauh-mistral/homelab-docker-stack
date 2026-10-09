@@ -9,7 +9,7 @@ Kernstück ist **Arcane** — die Verwaltungsoberfläche, unter der alle Stacks 
 
 | Komponente | Ort | Zweck |
 |---|---|---|
-| **Arcane** (Verwaltung) | `projects/arcane` | Docker-Verwaltungsoberfläche; verwaltet alle Compose-Stacks als Projekte. Daten als Bind-Mount unter `/opt/docker/arcane/` |
+| **Arcane** (Verwaltung) | `/opt/docker/compose/compose.yml` (Host) | Docker-Verwaltungsoberfläche; verwaltet alle Compose-Stacks als Projekte. **Selbst-Bootstrap**: Arcane kann sich nicht selbst verwalten — es läuft aus einem host-seitigen Compose-File außerhalb des Repos (`/opt/docker/compose/compose.yml`, Projektname `base`). Daten als Bind-Mount unter `/opt/docker/arcane/` |
 | **Compose-Stacks** | `projects/<stack>/` | Deklaration aller Services: `compose.yaml` + `.env.example`. Die echten `.env`-Dateien leben **nur auf dem Host** (`/opt/docker/arcane/projects/<stack>/.env`) — nie im Repo |
 | **Backup-System** | `backup/` | Auto-Discovery-Backup: sichert alle laufenden Container (Dateien + DB-Dumps) auf das NAS. Installiert nach `/opt/docker/backup` via `install.sh` |
 | **Dokumentation** | `docs/` | In-depth-Referenz: Deployment, Backup-Strategie, Restore, Inventar, offene Fragen |
@@ -18,7 +18,7 @@ Kernstück ist **Arcane** — die Verwaltungsoberfläche, unter der alle Stacks 
 
 | Stack | Services (Auswahl) | Zweck |
 |---|---|---|
-| `arcane` | arcane | Verwaltung aller Projekte (Kernstück) |
+| `arcane` | arcane | Verwaltung aller Projekte (Kernstück). **Hinweis:** Arcane selbst läuft nicht aus `projects/arcane`, sondern aus dem host-seitigen Compose-File `/opt/docker/compose/compose.yml` (Projekt `base`) — es kann sich nicht selbst hosten („Bootstrap-Problem"). Der Container ist identisch: `ghcr.io/getarcaneapp/arcane:latest`, Mounts auf `/opt/docker/arcane/data` und `/opt/docker/arcane/projects` |
 | `arr-stack` | sonarr, radarr, lidarr, bazarr, prowlarr, sabnzbd, overseerr | PVR/Media-Automation |
 | `media` | plex, tautulli, audiobookshelf, metube, calibre-web, codex, tdarr | Medienserver & -verarbeitung |
 | `smarthome` | homeassistant, music-assistant, mosquitto, matter-server | Hausautomatisierung |
@@ -42,6 +42,7 @@ Kernstück ist **Arcane** — die Verwaltungsoberfläche, unter der alle Stacks 
 ```mermaid
 flowchart LR
     subgraph host["Host ovi (/opt/docker)"]
+        B["/opt/docker/compose/compose.yml<br/>(Projekt 'base', Host-Compose)"] -->|"startet (Bootstrap — Arcane<br/>kann sich nicht selbst hosten)"| A
         A["Arcane<br/>(Verwaltung)"] -->|"verwaltet als Projekte"| S["Compose-Stacks<br/>(projects/*)"]
         S --- B[("/opt/docker/&lt;service&gt;/<br/>Bind-Mount-Daten")]
         S -.->|".env (nur Host)| E["/opt/docker/arcane/projects/&lt;stack&gt;/.env"]

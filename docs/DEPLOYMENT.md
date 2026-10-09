@@ -34,6 +34,15 @@ Das Backup-System liegt **bewusst nicht im Repo-Checkout** (`/opt/docker/arcane`
 - Repo-Checkout unter `/opt/docker/arcane` (aktuell: `sudo git pull`)
 - NAS-Mount `/mnt/systems` eingebunden: `findmnt /mnt/systems`
 
+**Arcane läuft nicht aus dem Repo.** Arcane kann sich nicht selbst hosten (Bootstrap-Problem: Die Verwaltungsoberfläche kann den Compose-Stack, der sie selbst startet, nicht verwalten). Der Arcane-Container läuft daher aus einem host-seitigen Compose-File außerhalb des Repos: `/opt/docker/compose/compose.yml` (Compose-Projektname `base`, Image `ghcr.io/getarcaneapp/arcane:latest`, Mounts auf `/opt/docker/arcane/data` und `/opt/docker/arcane/projects`). Start/Update von Hand:
+
+```bash
+cd /opt/docker/compose
+docker compose pull && docker compose up -d   # Arcane (base-Projekt) aktualisieren
+```
+
+Alle **anderen** Stacks werden als Projekte von Arcane verwaltet (`/opt/docker/arcane/projects`).
+
 ## Schritt 1: Installation
 
 ```bash
