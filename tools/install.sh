@@ -112,6 +112,12 @@ if [[ -f "$CONF_FILE" ]]; then
   grep -q "^STACKS_DIR=" "$CONF_FILE" || missing+=("STACKS_DIR=$STACKS_DIR")
   grep -q "^BACKUP_ROOT=" "$CONF_FILE" || missing+=("BACKUP_ROOT=$BACKUP_ROOT")
   grep -q "^POLICY_DIR=" "$CONF_FILE" || missing+=("POLICY_DIR=$INSTALL_HOME/policies.d")
+  # Verwaisten POLICY_DIR korrigieren (Pfad existiert nicht mehr, z.B. alte Installation)
+  old_policy_dir="$(grep -m1 '^POLICY_DIR=' "$CONF_FILE" | cut -d= -f2-)"
+  if [[ -n "$old_policy_dir" && ! -d "$old_policy_dir" ]]; then
+    sed -i "s|^POLICY_DIR=.*|POLICY_DIR=$INSTALL_HOME/policies.d|" "$CONF_FILE"
+    echo "Korrigiert: POLICY_DIR $old_policy_dir existiert nicht -> $INSTALL_HOME/policies.d"
+  fi
   grep -q "^KEEP_VERSIONS=" "$CONF_FILE" || missing+=("KEEP_VERSIONS=14")
   if [[ ${#missing[@]} -gt 0 ]]; then
     printf '%s\n' "${missing[@]}" >> "$CONF_FILE"
