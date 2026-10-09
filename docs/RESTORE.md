@@ -1,69 +1,72 @@
-# Restore-Anleitung pro Backup-Kategorie
+# Restore guide per backup category
 
-> ⚠️ **UNGETESTET — WORK IN PROGRESS.** `restore.sh` wurde noch nie gegen ein echtes Zielsystem ausgeführt. Die hier beschriebenen Abläufe sind plausibel, aber unverifiziert. Vor jedem produktiven Restore: Anweisung Schritt für Schritt gegen den aktuellen Code prüfen, zuerst `--dry-run`, und nach Möglichkeit an einem Wegwerf-Ziel testen. Bis zur Verifikation gilt: Restore-Anleitung `docs/RESTORE.md` = Referenz, `restore.sh` = experimentell.
+> ⚠️ **UNTESTED — WORK IN PROGRESS.** `restore.sh` has never been executed against a real target system. The procedures described here are plausible but unverified. Before any production restore: check the instructions step by step against the current code, run `--dry-run` first, and if possible test against a throwaway target. Until verified: restore guide `docs/RESTORE.md` = reference, `restore.sh` = experimental.
 
-Allgemein: `backup/restore.sh <service> [--version v.N] [--dry-run] [--db-only] [--files-only]`
-Liste der Services: `backup/backup.sh --discover`. Backup-Stände: `/mnt/systems/backups/<host>/<service>/db|files/v.N` (`v.0` = aktuellster Stand).
+General: `backup/restore.sh <service> [--version v.N] [--dry-run] [--db-only] [--files-only]`
 
-**Vor jedem Restore**: `backup/backup.sh --service <name>` laufen lassen (frischer Stand) oder bewusst den letzten Stand verwenden. `--dry-run` zuerst zeigen lassen, was passieren würde.
+List of services: `backup/backup.sh --discover`. Backup states: `/mnt/systems/backups/<host>/<service>/db|files/v.N` (`v.0` = latest state).
 
-## Kategorie: DB-Dump (postgres / mysql / mariadb)
+**Before every restore**: run `backup/backup.sh --service <name>` (fresh state) or deliberately use the last state. Let `--dry-run` show first what would happen.
 
-Services (aktuell): analytics-db, castopod_mariadb, ghost-mysql, immich_postgres, litellm_db
+## Category: DB dump (postgres / mysql / mariadb)
 
-1. Service-Stack ggf. stoppen (App-Container, NICHT die DB): `docker stop <app-container>` — sonst schreiben Apps während des Restores.
+Services (currently): analytics-db, castopod_mariadb, ghost-mysql, immich_postgres, litellm_db
+
+1. If needed, stop the service's stack (the app container, NOT the DB): `docker stop <app-container>` — otherwise apps write during the restore.
 2. `backup/restore.sh <service> --db-only`
    - Postgres: `gunzip -c dump.sql.gz | docker exec -i <db> psql -U <user> -d <db> --single-transaction --set ON_ERROR_STOP=on`
-   - MySQL/MariaDB: analog mit `mysql -u<user> <db>` (Passwort via Env).
-3. App-Container wieder starten.
-4. **Verifizieren**: Login testen, Objektzahl plausibilisieren (z.B. Immich: Fotos zählen).
+   - MySQL/MariaDB: analogously with `mysql -u<user> <db>` (password via env).
+3. Start the app container again.
+4. **Verify**: test login, sanity-check object counts (e.g. immich: count photos).
 
-Spezialfälle:
-- **Immich**: Restore in eine *leere* DB (Doku: frische Installation, `docker compose create`, nur DB-Container starten, Dump einspielen, dann Rest starten). Der Dump enthält `--clean --if-exists` bzw. pg_dumpall-Form und kann über bestehende Strukturen gespielt werden.
-- **Ghost**: beide Schemas (`ghost_prod`, `ghost_activitypub`) sind im Dump enthalten (dump wurde über die Instanz erstellt); ActivityPub-Container nach Restore mitstarten.
-- **Forgejo** (`DB_TYPE=forgejo`): der `forgejo dump` liegt als ZIP vor. Manueller Restore (Forgejo-/Gitea-Doku):
-  1. Stack stoppen. 2. ZIP entpacken. 3. `data/*` nach `/data/gitea`, `repos/*` nach `/data/git/gitea-repositories/` verschieben. 4. `chown -R git:git /data`. 5. `forgejo admin regenerate hooks` (bzw. `gitea admin regenerate hooks`) ausführen. 6. Stack starten.
-- **Open-Notebook** (`DB_TYPE=surreal`): `docker exec <c> surreal import --conn rocksdb:/mydata -f export.surql` (Export-Datei aus dem Backup-Stand).
+Special cases:
 
-## Kategorie: DB-Dump (sqlite) — Vaultwarden
+- **Immich**: restore into an *empty* DB (docs: fresh install, `docker compose create`, start only the DB container, replay the dump, then start the rest). The dump contains `--clean --if-exists` respectively the pg_dumpall form and can be replayed over existing structures.
+- **Ghost**: both schemas (`ghost_prod`, `ghost_activitypub`) are contained in the dump (the dump was created through the instance); start the ActivityPub container after the restore as well.
+- **Forgejo** (`DB_TYPE=forgejo`): the `forgejo dump` is a ZIP. Manual restore (Forgejo/Gitea docs):
+  1. Stop the stack. 2. Unpack the ZIP. 3. Move `data/*` to `/data/gitea`, `repos/*` to `/data/git/gitea-repositories/`. 4. `chown -R git:git /data`. 5. Run `forgejo admin regenerate hooks` (or `gitea admin regenerate hooks`). 6. Start the stack.
+- **Open-Notebook** (`DB_TYPE=surreal`): `docker exec <c> surreal import --conn rocksdb:/mydata -f export.surql` (export file from the backup state).
 
-Hersteller-Prozedur (Vaultwarden-Wiki):
-1. Container stoppen: `docker stop vaultwarden`
-2. **`db.sqlite3-wal` und `db.sqlite3-shm` löschen** (sonst Korruption durch stale WAL!)
-3. Dump-Datei (`db.sqlite3.sqlite3` aus dem Backup-Stand) nach `/opt/docker/vaultwarden/db.sqlite3` kopieren.
+## Category: DB dump (sqlite) — Vaultwarden
+
+Vendor procedure (Vaultwarden wiki):
+
+1. Stop the container: `docker stop vaultwarden`
+2. **Delete `db.sqlite3-wal` and `db.sqlite3-shm`** (otherwise corruption from stale WAL!)
+3. Copy the dump file (`db.sqlite3.sqlite3` from the backup state) to `/opt/docker/vaultwarden/db.sqlite3`.
 4. `docker start vaultwarden`
-5. Verifizieren: Login, Vault-Inhalt stichprobenartig prüfen.
+5. Verify: login, spot-check vault contents.
 
-`restore.sh vaultwarden` führt Schritt 1–4 automatisch aus (Stop → WAL löschen → Kopie → Start).
+`restore.sh vaultwarden` performs steps 1–4 automatically (stop → delete WAL → copy → start).
 
-## Kategorie: Datei-Rsync-Restic (und config_only mit Stop-Fenster)
+## Category: file rsync/restic (and config_only with stop window)
 
-Services (aktuell): immich (files), castopod (media), vaultwarden, wanderer, forgejo (repos), ghost (content) sowie alle Config-only-Services.
+Services (currently): immich (files), castopod (media), vaultwarden, wanderer, forgejo (repos), ghost (content) plus all config-only services.
 
-1. `backup/restore.sh <service> --files-only [--date ...]`
-   - Das Skript öffnet automatisch das Stop-Fenster (deklarierte `STOP_CONTAINERS`), rsynct die Dateien zurück und startet die Container wieder.
-2. **Verifizieren** je Service:
-   - Immich: Fotos sichtbar, Thumbs bauen sich nach.
-      - Media-Services: UI öffnen, Bibliothek vorhanden, keine DB-Fehler im Log.
-3. **Achtung Restore-Richtung**: `restore_files` überschreibt den aktuellen Zustand des Zielpfads mit dem Backup-Stand (`rsync -a` ohne `--delete` — Dateien, die im Backup nicht sind, bleiben liegen; für exakte Spiegelung `rsync -a --delete` manuell nachziehen).
+1. `backup/restore.sh <service> --files-only [--version v.N]`
+   - The script automatically opens the stop window (declared `STOP_CONTAINERS`), rsyncs the files back, and restarts the containers.
+2. **Verify** per service:
+   - Immich: photos visible, thumbnails rebuild.
+   - Media services: open the UI, library present, no DB errors in the log.
+3. **Mind the restore direction**: `restore_files` overwrites the current state of the target path with the backup state (`rsync -a` without `--delete` — files not in the backup stay in place; for exact mirroring run `rsync -a --delete` manually afterwards).
 
-## Kategorie: config_only ohne Stop-Fenster (homepage, searxng, web-proxy, mosquitto, codex)
+## Category: config_only without stop window (homepage, searxng, web-proxy, mosquitto, codex)
 
 1. `backup/restore.sh <service> --files-only`
-2. Container i.d.R. neu starten (`docker restart <c>`), damit Config neu eingelesen wird.
-3. Verifizieren: Seite/Flow erreichbar, Proxy-Routen funktionieren (web-proxy: `docker exec web-proxy-nginx nginx -t` vor dem Reload!).
+2. Usually restart the container (`docker restart <c>`) so the config is re-read.
+3. Verify: page/flow reachable, proxy routes work (web-proxy: `docker exec web-proxy-nginx nginx -t` before the reload!).
 
-## Kategorie: ignorieren
+## Category: ignored
 
-Für als `ignore` deklarierte Services (crawl4ai, firecrawl, metube, Media-Libraries — siehe `policies.d/`) gibt es keinen Restore — sie sind aus dem Compose-Stack neu aufsetzbar bzw. die Daten liegen in den Media-Backups anderer Systeme.
+For services declared `ignore` (crawl4ai, firecrawl, metube, media libraries — see `policies.d/`) there is no restore — they can be rebuilt from the compose stack, or the data lives in other systems' media backups.
 
-## Restore-Test (halbautomatisch)
+## Restore test (semi-automatic)
 
-`backup/test-restore.sh` — spielt die Dumps aller DB-Services (Postgres und MariaDB) in Wegwerf-Container ein und prüft, dass Tabellen entstehen. Einzelner Service als Argument, `--dry-run` zeigt die Testliste. Empfehlung: monatlich ausführen; Ergebnis im Lauf-Log dokumentieren.
+`backup/test-restore.sh` — replays the dumps of all DB services (Postgres and MariaDB) into throwaway containers and verifies that tables are created. Single service as argument; `--dry-run` shows the test list. Recommendation: run monthly; document the result in the run log.
 
-## Checkliste nach jedem Restore
+## Checklist after every restore
 
-- [ ] Service-Container laufen (`docker ps`)
-- [ ] Logs frei von DB-Fehlern (`docker logs --tail 50 <c>`)
-- [ ] Funktionsprobe über die UI/API
-- [ ] Backup-Lauf wieder aktivieren (falls deaktiviert) und einmalig manuell triggern
+- [ ] Service containers running (`docker ps`)
+- [ ] Logs free of DB errors (`docker logs --tail 50 <c>`)
+- [ ] Functional check via UI/API
+- [ ] Re-enable the backup schedule (if disabled) and trigger one manual run
