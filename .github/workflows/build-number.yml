@@ -25,7 +25,10 @@ jobs:
         id: pr
         run: |
           SUBJECT="$(git log -1 --format='%s' "$GITHUB_SHA")"
-          PR_NUM="$(printf '%s' "$SUBJECT" | sed -n 's/.*(#\([0-9][0-9]*\))$/\1/p')"
+          # Unterstützt beide Merge-Formen:
+          #   Merge-Commit: "Merge pull request #41 from owner/branch" (#N in der Mitte)
+          #   Squash:       "backup: irgendwas (#41)" (#N am Ende)
+          PR_NUM="$(printf '%s' "$SUBJECT" | sed -n -e 's/.*[Pp]ull request #\([0-9][0-9]*\).*/\1/p' -e 's/.*(#\([0-9][0-9]*\))$/\1/p' | head -1)"
           if [[ -z "$PR_NUM" ]]; then
             echo "Keine PR-Nummer im Commit-Subject gefunden — kein Update noetig."
             echo "skip=true" >> "$GITHUB_OUTPUT"
