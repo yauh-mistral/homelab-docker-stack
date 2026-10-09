@@ -72,7 +72,7 @@ flowchart TB
 - **Auto-Discovery**: Findest du einen Mount, sicher ihn. Läuft eine DB, dump sie. Keine statischen Service-Deklarationen mehr.
 - **Rotation**: rsnapshot-artig `v.0..v.13` mit Hardlink-Dedupe — Restore-Pfade bleiben stabil.
 - **Policies für Ausnahmen**: `tools/backup/policy.conf` (globale Defaults, Allowlist `/opt/docker`) + `policies.d/` (z.B. `SVC_IGNORE=true` für Caches, `EXTRA_FILE_EXCLUDES` für rebuildbare Daten).
-- **Restore-Test**: `test-restore.sh --all` spielt DB-Dumps in einen Wegwerf-Postgres — das Live-System wird nie berührt.
+- **Restore-Test**: `test-restore.sh` (ohne Argument = alle) spielt DB-Dumps in Wegwerf-Container (Postgres + MariaDB) — das Live-System wird nie berührt.
 - **Versionierung**: `v1.0.0+#<PR-Nummer>` — die Build-Nummer wird von der GitHub Action bei jedem Merge automatisch nachgetragen.
 
 Details: [`docs/BACKUP-STRATEGIE.md`](docs/BACKUP-STRATEGIE.md) · [`docs/RESTORE.md`](docs/RESTORE.md) · [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
@@ -89,7 +89,7 @@ sudo tools/install.sh --home /opt/docker/tools \
 # Testen
 sudo /opt/docker/tools/backup/backup.sh --dry-run       # nichts schreiben, nur planen
 sudo /opt/docker/tools/backup/backup.sh                 # echter Lauf
-sudo /opt/docker/tools/backup/test-restore.sh --all     # Restore-Fähigkeit prüfen
+sudo /opt/docker/tools/backup/test-restore.sh            # Restore-Fähigkeit prüfen (alle)
 ```
 
 ### Nächtclicher Cron (auf dem Docker-Host, root-Crontab)

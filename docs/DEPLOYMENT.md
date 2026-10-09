@@ -127,8 +127,8 @@ Einzelfehler isolieren andere Services nicht (Fehler-Isolation pro Deklaration).
 ## Schritt 8: Restore-Test
 
 ```bash
-sudo /opt/docker/tools/backup/test-restore.sh          # default: litellm
-sudo /opt/docker/tools/backup/test-restore.sh --all   # alle Postgres-Services
+sudo /opt/docker/tools/backup/test-restore.sh          # alle DB-Services (Default)
+sudo /opt/docker/tools/backup/test-restore.sh litellm_db   # nur ein Service
 ```
 
 ## Schritt 9: Cron-Aktivierung
