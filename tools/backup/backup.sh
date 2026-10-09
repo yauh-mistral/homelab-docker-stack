@@ -66,7 +66,7 @@ if [[ "$DRY_RUN" != "true" ]]; then
     log_fail "Abbruch: Backup-Ziel $BACKUP_ROOT ist nicht als NAS-Mount verfuegbar"
     exit 1
   fi
-  mkdir -p "$BACKUP_ROOT/_meta/runs" || { log_fail "Abbruch: Kann $BACKUP_ROOT/_meta/runs nicht anlegen"; exit 1; }
+  mkdir -p "$BACKUP_ROOT/logs" || { log_fail "Abbruch: Kann $BACKUP_ROOT/logs nicht anlegen"; exit 1; }
 fi
 
 # ----------------------------------------------------------------------
@@ -358,7 +358,7 @@ log_info "Lauf beendet: OK=$OKS FAIL=$FAILS SKIP=$SKIPS PARTIAL=$PARTIALS"
 if [[ "$DRY_RUN" != "true" ]]; then
   printf 'OK=%s FAIL=%s SKIP=%s PARTIAL=%s DUMPS=%s FILES=%s BYTES=%s\n' \
     "$OKS" "$FAILS" "$SKIPS" "$PARTIALS" "$STAT_DUMPS" "$STAT_FILES" "$STAT_BYTES" \
-    > "$BACKUP_ROOT/_meta/last-run-summary.txt" 2>/dev/null || true
+    > "$BACKUP_ROOT/logs/last-run-summary.txt" 2>/dev/null || true
 fi
 
 if [[ "$DRY_RUN" != "true" ]]; then

@@ -36,7 +36,7 @@ Kernstück ist **Arcane** — die Verwaltungsoberfläche, unter der alle Stacks 
 | `wanderer` | wanderer (app, db, search, web) | Routenplanung (Hiking) |
 | `analytics` | shynet (analytics-db) | Web-Analytics |
 
-**Konvention:** Jeder Stack hat ein `compose.yaml` mit Bind-Mounts unter `/opt/docker/<service>/`. Docker-Volumes werden **nie** für zu sichernde Daten genutzt; NAS-Mounts (`/mnt/...`) sind nie Backup-Quelle.
+**Konvention:** Jeder Stack hat ein `compose.yaml`. Nutzdaten liegen als Bind-Mounts unter `/opt/docker/<stack>/` (z.B. `/opt/docker/ghost/` für den gesamten ghost-Stack inkl. aller Services). Docker-Volumes werden **nie** für zu sichernde Daten genutzt; NAS-Mounts (`/mnt/...`) sind nie Backup-Quelle.
 
 ## Zusammenhänge (Diagramm)
 
@@ -105,49 +105,35 @@ sudo /opt/docker/tools/backup/test-restore.sh --all     # Restore-Fähigkeit pr�
 
 - Läuft täglich um 02:30 Uhr
 - `flock -n` verhindert Überlappungen (das Skript selbst lockt zusätzlich — doppelt abgesichert)
-- Log landet in `/var/log/backup-dispatcher.log` (das Skript schreibt zusätzlich strukturiert nach `$BACKUP_ROOT/_meta/runs/`)
+- Log landet in `/var/log/backup-dispatcher.log` (das Skript schreibt zusätzlich strukturiert nach `$BACKUP_ROOT/logs/`)
 
 Einrichten mit `sudo crontab -e` und Zeile einfügen.
 
 ## Verzeichnisstruktur
 
-```
+```text
 arcane-docker-stack/
-├── AGENTS.md              # Leitlinie für die Zusammenarbeit (KI + Mensch)
-├── projects/              # Compose-Stacks: <stack>/compose.yaml (+ .env.example je Stack)
-│                          #   + env-details.md (Secret-/Format-Konventionen)
-├── tools/                 # Host-Tools (Installationspfad: /opt/docker/tools/)
-│   ├── backup/            # Backup-System (Dispatcher, libs, policies)
-│   │   ├── backup.sh      # Dispatcher mit Auto-Discovery
-│   │   ├── restore.sh     # Restore pro Service
-│   │   ├── test-restore.sh # Dump-Restore-Test (Wegwerf-Postgres)
-│   │   ├── install.sh     # Installation nach /opt/docker/tools/backup
-│   │   ├── policy.conf    # Globale Backup-Defaults
-│   │   ├── policies.d/     # Ausnahme-Policies (Projekt/Container)
-│   │   └── lib/            # common.sh, db.sh, discovery.sh
-│   ├── arcane/            # Bootstrap-Compose für Arcane selbst (Host: /opt/docker/tools/arcane)
-│   └── maintenance/       # docker-maintenance.sh (prune Images/Container/Netzwerke/Volumes)
-├── docs/                  # In-depth-Dokumentation
-│   ├── DEPLOYMENT.md      # Installation & Inbetriebnahme
-│   ├── BACKUP-STRATEGIE.md# Strategie & Policy-Referenz
-│   ├── RESTORE.md         # Restore-Anleitung
-│   ├── INVENTAR.md        # Service-Inventar (Backup-Kategorien)
-│   └── TODOS.md           # Offene Todos & dokumentierte Entscheidungen
+├── AGENTS.md
+├── projects/
+│   ├── ghost/
+│   ├── immich/
+│   └── ...
+├── tools/
+│   ├── arcane/
+│   ├── backup/
+│   └── maintenance/
+└── docs/
 ```
+
+- **projects/** — je Stack ein Verzeichnis (`compose.yaml`, optional `.env.example`), plus `env-details.md` (Secret-/Format-Konventionen)
+- **tools/** — Host-Tools: `arcane/` (Bootstrap-Compose), `backup/` (Backup-System), `maintenance/` (Docker-Pflege)
+- **docs/** — In-depth-Dokumentation
 
 ## Doku-Verteilung (weniger Redundanz)
 
-| Thema | Hier (README) | In `docs/` |
-|---|---|---|
-| Komponenten, Stacks, Zusammenhänge | Überblick + Diagramm | — |
-| Deployment (Installation, erste Schritte) | Schnellstart-Block | [`DEPLOYMENT.md`](docs/DEPLOYMENT.md) (vollständig) |
-| Backup (Strategie, Policies, Rotation) | Kurzfassung | [`BACKUP-STRATEGIE.md`](docs/BACKUP-STRATEGIE.md) (Referenz) |
-| Restore | Kurzfassung | [`RESTORE.md`](docs/RESTORE.md) (vollständig) |
-| Service-Inventar | Stack-Tabelle (Namen) | [`INVENTAR.md`](docs/INVENTAR.md) (Kategorien, Größen, Pfade) |
-| Todos & Entscheidungen | — | [`TODOS.md`](docs/TODOS.md) (offene Punkte, compact) |
-| Cron-Einrichtung | Beispiel-Zeile | [`DEPLOYMENT.md`](docs/DEPLOYMENT.md) |
+In-depth-Doku in `docs/`: [`DEPLOYMENT.md`](docs/DEPLOYMENT.md) (Installation, Cron) · [`BACKUP-STRATEGIE.md`](docs/BACKUP-STRATEGIE.md) (Strategie, Policies) · [`RESTORE.md`](docs/RESTORE.md) (Restore) · [`INVENTAR.md`](docs/INVENTAR.md) (Service-Inventar) · [`TODOS.md`](docs/TODOS.md) (offene Todos & Entscheidungen)
 
-Regel: **README = was gibt es und wie hängt es zusammen; docs/ = wie mache ich es Schritt für Schritt.** Überschneidungen bewusst als Kurzfassung mit Link, nie als Kopie.
+Regel: **README = Überblick, docs/ = Schritt für Schritt.**
 
 ## Zusammenarbeit
 
