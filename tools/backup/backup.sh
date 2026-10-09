@@ -5,7 +5,7 @@
 # Ausnahmen: Excludes, Stop-Fenster, SQLite/Forgejo, IGNORES.
 #
 # Usage:
-#   backup.sh [--dry-run] [--only-db] [--only-files] [--service NAME] [--project NAME]
+#   backup.sh [--dry-run] [--only-db] [--only-files] [--service CONTAINER] [--project STACK]
 #   backup.sh --list
 #   backup.sh --discover            # nur Inventar anzeigen, kein Backup
 #
@@ -29,8 +29,8 @@ while [[ $# -gt 0 ]]; do
     --dry-run)     DRY_RUN=true ;;
     --only-db)     ONLY_DB=true ;;
     --only-files)  ONLY_FILES=true ;;
-    --service)     shift; SERVICE_FILTER="${1:?--service braucht einen Namen}" ;;
-    --project)     shift; PROJECT_FILTER="${1:?--project braucht einen Namen}" ;;
+    --service)     shift; SERVICE_FILTER="${1:?--service braucht einen Containernamen}" ;;
+    --project)     shift; PROJECT_FILTER="${1:?--project braucht einen Stack-Namen (Compose-Projekt)}" ;;
     --list|--discover) LIST=true; DISCOVER=true ;;
     -h|--help)     sed -n '2,13p' "$0"; exit 0 ;;
     *) echo "Unbekannte Option: $1" >&2; exit 2 ;;

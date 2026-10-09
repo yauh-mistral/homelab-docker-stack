@@ -6,7 +6,7 @@
 # Die Compose enthaelt Secrets und wird von Hand gepflegt (siehe docs/DEPLOYMENT.md).
 #
 # Usage:
-#   install.sh [--home /opt/docker/tools/backup] [--stacks-dir /pfad/zu/projects] [--backup-root /mnt/systems/backups/<host>]
+#   tools/install.sh [--home /opt/docker/tools] [--stacks-dir /pfad/zu/projects] [--backup-root /mnt/systems/backups/<host>]
 #
 set -u
 set -o pipefail
@@ -14,8 +14,8 @@ set -o pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Version und Build (PR-Nummer) zum Installationszeitpunkt aus lib/common.sh uebernehmen
-LIB_VERSION="$(grep -m1 '^SCRIPT_VERSION=' "$SCRIPT_DIR/lib/common.sh" | cut -d= -f2 | tr -d '"')"
-LIB_BUILD="$(grep -m1 '^SCRIPT_BUILD=' "$SCRIPT_DIR/lib/common.sh" | cut -d= -f2 | tr -d '"')"
+LIB_VERSION="$(grep -m1 '^SCRIPT_VERSION=' "$SCRIPT_DIR/backup/lib/common.sh" | cut -d= -f2 | tr -d '"')"
+LIB_BUILD="$(grep -m1 '^SCRIPT_BUILD=' "$SCRIPT_DIR/backup/lib/common.sh" | cut -d= -f2 | tr -d '"')"
 INSTALL_STAMP="$(date '+%Y-%m-%d %H:%M')"
 
 TOOLS_HOME="/opt/docker/tools"
@@ -79,17 +79,17 @@ copy_tree() {
     fi
   fi
 }
-copy_file "$SCRIPT_DIR/backup.sh" "$INSTALL_HOME/"
-copy_file "$SCRIPT_DIR/restore.sh" "$INSTALL_HOME/"
-copy_file "$SCRIPT_DIR/test-restore.sh" "$INSTALL_HOME/"
-copy_tree "$SCRIPT_DIR/lib" "$INSTALL_HOME/lib"
-copy_tree "$SCRIPT_DIR/policies.d" "$INSTALL_HOME/policies.d" true
-copy_file "$SCRIPT_DIR/policy.conf" "$INSTALL_HOME/"
+copy_file "$SCRIPT_DIR/backup/backup.sh" "$INSTALL_HOME/"
+copy_file "$SCRIPT_DIR/backup/restore.sh" "$INSTALL_HOME/"
+copy_file "$SCRIPT_DIR/backup/test-restore.sh" "$INSTALL_HOME/"
+copy_tree "$SCRIPT_DIR/backup/lib" "$INSTALL_HOME/lib"
+copy_tree "$SCRIPT_DIR/backup/policies.d" "$INSTALL_HOME/policies.d" true
+copy_file "$SCRIPT_DIR/backup/policy.conf" "$INSTALL_HOME/"
 chmod +x "$INSTALL_HOME"/*.sh
 
 # --- Maintenance-Tool mitinstallieren (gleiche Tools-Heimat, kein Bootstrap!) ---
-if [[ -d "$SCRIPT_DIR/../maintenance" ]]; then
-  copy_tree "$SCRIPT_DIR/../maintenance" "$MAINT_HOME" true
+if [[ -d "$SCRIPT_DIR/maintenance" ]]; then
+  copy_tree "$SCRIPT_DIR/maintenance" "$MAINT_HOME" true
   chmod +x "$MAINT_HOME"/*.sh
   echo "Kopiert: maintenance -> $MAINT_HOME"
 else
@@ -146,6 +146,6 @@ echo
 echo "== Installation abgeschlossen =="
 echo "Naechste Schritte:"
 echo "  1. Trockenlauf:  sudo $INSTALL_HOME/backup.sh --dry-run"
-echo "  2. Erstlauf:     sudo $INSTALL_HOME/backup.sh --service litellm"
+echo "  2. Erstlauf:     sudo $INSTALL_HOME/backup.sh --service <container-name>"
 echo "  3. Voller Lauf:  sudo $INSTALL_HOME/backup.sh"
 echo "  Cron-Zeiten:     siehe $TOOLS_HOME/docs/DEPLOYMENT.md"
