@@ -173,7 +173,7 @@ test_mysql_restore() {
     restore_db="$(sed -n 's/^USE `\([^`]*\)`.*$/\1/p' <<<"$use_line")"
     [[ -n "$restore_db" ]] || restore_db="testdb"
   fi
-  if gunzip -c "$dump" | docker exec -i "$TEST_MY_NAME" mariadb -uroot -ptestpass >/dev/null 2>&1; then
+  if gunzip -c "$dump" | docker exec -i "$TEST_MY_NAME" mariadb -uroot -ptestpass "$restore_db" >/dev/null 2>&1; then
     local tables
     tables="$(docker exec "$TEST_MY_NAME" mariadb -uroot -ptestpass -NBe "SELECT count(*) FROM information_schema.tables WHERE table_schema='$restore_db'" 2>/dev/null)"
     if [[ "${tables:-0}" -gt 0 ]]; then
