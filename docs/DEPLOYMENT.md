@@ -137,12 +137,12 @@ sudo /opt/docker/tools/backup/test-restore.sh litellm_db   # nur ein Service
 sudo crontab -e
 ```
 ```cron
-30 2 * * * /usr/bin/flock -n /tmp/backup-dispatcher.lock /opt/docker/tools/backup/backup.sh >> /var/log/backup-dispatcher.log 2>&1
+30 2 * * * /opt/docker/tools/backup/backup.sh >> /var/log/backup-dispatcher.log 2>&1
 30 4 1 * * /opt/docker/tools/maintenance/docker-maintenance.sh >> /var/log/docker-maintenance.log 2>&1
 ```
 
 Die Maintenance-Zeile (monatlich, 1. des Monats 04:30) prunt bewusst auch Volumes (`--volumes`-Verhalten ist Default; `--no-volumes` zum Deaktivieren). Sie läuft nie parallel zu Backups — das Skript bricht selbst ab, wenn ein Backup-/Restore-Prozess läuft (Stop-Fenster-Container wären sonst Verlustkandidaten).
-`flock` ist im Dispatcher eingebaut (parallele Läufe blockiert). Nach dem Testrun Cron-Zeiten gegen die tatsächliche Laufzeit prüfen (große rsync-Ziele wie `/mnt/immich` — ggf. Immich-Dateianteil wöchentlich).
+`flock` ist im Dispatcher eingebaut (parallele Läufe blockiert) — **keinen externen `flock`-Wrapper** setzen: derselbe Lockfile extern und intern blockiert sich gegenseitig und lässt jeden Cron-Lauf sofort abbrechen. Nach dem Testrun Cron-Zeiten gegen die tatsächliche Laufzeit prüfen (große rsync-Ziele wie `/mnt/immich` — ggf. Immich-Dateianteil wöchentlich).
 
 ## Versionierung & Retention (rsnapshot-Stil)
 
