@@ -34,4 +34,4 @@ rsnapshot-artig `v.0..v.N` (`KEEP_VERSIONS`, Default 14), kein Timestamp im Pfad
 - `DB_DUMP_ALL=true` — pg_dumpall (immich)
 - `DB_TYPE=sqlite|forgejo`, `SQLITE_FILES=( "host:container" )`
 
-Siehe `backup/policies.d/README.md`.
+Siehe `tools/backup/policies.d/README.md`.
