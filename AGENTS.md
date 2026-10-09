@@ -4,7 +4,7 @@
 
 - Dieses Repo umfasst die **gesamte Docker-Landschaft des Hosts**: Compose-Stacks (`projects/`), die Host-Tools (`tools/`: `backup/` Backup-System, `arcane/` Bootstrap-Compose für Arcane selbst, `maintenance/` Docker-Pflege/prune) und die In-depth-Doku (`docs/`). Kernstück ist **Arcane** als Verwaltungsoberfläche, unter der alle Stacks als Projekte laufen. Installationspfad der Tools auf dem Host: `/opt/docker/tools/` (Backup-System unter `/opt/docker/tools/backup`).
 - **README.md** = Überblick: Komponenten, Stacks, Zusammenhänge (inkl. Mermaid-Diagramm), Kurzfassungen mit Link auf docs/. **Keine Schritt-für-Schritt-Anleitungen im README.**
-- **docs/** = In-depth: DEPLOYMENT.md (Installation/Inbetriebnahme/Cron), BACKUP-STRATEGIE.md (Strategie/Policy-Referenz), RESTORE.md (Restore), INVENTAR.md (Service-Inventar), TODOS.md (offene Todos/entscheidene Annahmen).
+- **docs/** = In-depth: DEPLOYMENT.md (Installation/Inbetriebnahme/Cron), BACKUP-STRATEGIE.md (Strategie/Policy-Referenz), RESTORE.md (Restore), INVENTAR.md (Service-Inventar), TODOS.md (offene Todos).
 - **Redundanz-Regel**: Jedes Thema hat genau eine ausführliche Heimat; das andere verlinkt mit Kurzfassung. Nie Inhalte doppelt pflegen — bei Änderungen beide Stellen prüfen oder die Kurzfassung bewusst generisch halten.
 
 ## Docker-Projects-Thematik (projects/)
