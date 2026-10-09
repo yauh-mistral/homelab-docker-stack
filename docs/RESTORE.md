@@ -44,7 +44,7 @@ Services (aktuell): immich (files), castopod (media), vaultwarden, wanderer, for
    - Das Skript öffnet automatisch das Stop-Fenster (deklarierte `STOP_CONTAINERS`), rsynct die Dateien zurück und startet die Container wieder.
 2. **Verifizieren** je Service:
    - Immich: Fotos sichtbar, Thumbs bauen sich nach.
-      - arr-Services (sonarr etc.): UI öffnen, Serien/Filme vorhanden, keine DB-Fehler im Log.
+      - Media-Services: UI öffnen, Bibliothek vorhanden, keine DB-Fehler im Log.
 3. **Achtung Restore-Richtung**: `restore_files` überschreibt den aktuellen Zustand des Zielpfads mit dem Backup-Stand (`rsync -a` ohne `--delete` — Dateien, die im Backup nicht sind, bleiben liegen; für exakte Spiegelung `rsync -a --delete` manuell nachziehen).
 
 ## Kategorie: config_only ohne Stop-Fenster (homepage, searxng, web-proxy, mosquitto, codex)
